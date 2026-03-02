@@ -123,8 +123,9 @@ response = client.images.generate(
 Access optical character recognition endpoints.
 
 ```python
-response = client.ocr.extract(
-    file=open("document.pdf", "rb")
+response = client.ocr.process(
+    document={"document_url": "data:application/pdf;base64,..."},
+    model="mistral-ocr"
 )
 ```
 
@@ -138,10 +139,13 @@ models = client.models.list()
 
 ### responses
 
-Access response management endpoints.
+Access the OpenAI Responses API.
 
 ```python
-response = client.responses.retrieve(response_id="resp_123")
+response = client.responses.create(
+    model="gpt-4",
+    input="Hello, how are you?"
+)
 ```
 
 ## Examples

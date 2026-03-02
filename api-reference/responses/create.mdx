@@ -1,0 +1,338 @@
+---
+title: "create"
+description: "Create a response using the OpenAI Responses API"
+---
+
+## Method signature
+
+```python
+client.responses.create(
+    *,
+    background: Optional[bool] = None,
+    conversation: Optional[dict] = None,
+    credentials: Optional[dict] = None,
+    frequency_penalty: Optional[float] = None,
+    include: Optional[list[str]] = None,
+    input: Union[str, list[dict], None] = None,
+    instructions: Union[str, list[dict], None] = None,
+    max_output_tokens: Optional[int] = None,
+    max_tool_calls: Optional[int] = None,
+    mcp_servers: Optional[dict] = None,
+    metadata: Optional[dict[str, str]] = None,
+    model: Optional[str] = None,
+    parallel_tool_calls: Optional[bool] = None,
+    presence_penalty: Optional[float] = None,
+    previous_response_id: Optional[str] = None,
+    prompt: Optional[dict] = None,
+    prompt_cache_key: Optional[str] = None,
+    reasoning: Optional[dict] = None,
+    safety_identifier: Optional[str] = None,
+    service_tier: Optional[Literal["auto", "default"]] = None,
+    store: Optional[bool] = None,
+    stream: bool = False,
+    stream_options: Optional[dict] = None,
+    temperature: Optional[float] = None,
+    text: Optional[dict] = None,
+    tool_choice: Union[str, dict, None] = None,
+    tools: Optional[list[dict]] = None,
+    top_logprobs: Optional[int] = None,
+    top_p: Optional[float] = None,
+    truncation: Optional[Literal["auto", "disabled"]] = None,
+    user: Optional[str] = None,
+) -> Response
+```
+
+## Overview
+
+Create a response using the OpenAI Responses API. This endpoint routes directly to OpenAI's Responses API and **only supports OpenAI models**.
+
+The Responses API provides a stateful conversation interface with built-in support for function calling, file inputs, and conversation state management.
+
+## Parameters
+
+<ParamField path="background" type="bool">
+  Whether to run the model response in the background. Learn more in the [OpenAI background guide](https://platform.openai.com/docs/guides/background).
+</ParamField>
+
+<ParamField path="conversation" type="dict">
+  Conversation that this response belongs to. Items from this conversation are prepended to the input items, and output items from this response are automatically added after completion.
+</ParamField>
+
+<ParamField path="credentials" type="dict">
+  Credentials for MCP server authentication. Each credential is matched to servers by connection name.
+</ParamField>
+
+<ParamField path="frequency_penalty" type="float">
+  Penalizes new tokens based on their frequency in the text so far. Values between -2.0 and 2.0.
+</ParamField>
+
+<ParamField path="include" type="list[str]">
+  Specify additional output data to include in the model response. Supported values:
+  - `web_search_call.action.sources` - Include web search sources
+  - `code_interpreter_call.outputs` - Include code execution outputs
+  - `computer_call_output.output.image_url` - Include computer call images
+  - `file_search_call.results` - Include file search results
+  - `message.input_image.image_url` - Include input image URLs
+  - `message.output_text.logprobs` - Include logprobs with assistant messages
+  - `reasoning.encrypted_content` - Include encrypted reasoning tokens
+</ParamField>
+
+<ParamField path="input" type="str | list[dict]">
+  Text, image, or file inputs to the model. Can be a string for simple text input, or a list of objects for multi-modal inputs.
+
+  Learn more:
+  - [Text inputs and outputs](https://platform.openai.com/docs/guides/text)
+  - [Image inputs](https://platform.openai.com/docs/guides/images)
+  - [File inputs](https://platform.openai.com/docs/guides/pdf-files)
+</ParamField>
+
+<ParamField path="instructions" type="str | list[dict]">
+  A system (or developer) message inserted into the model's context. When using with `previous_response_id`, instructions from the previous response will not be carried over.
+</ParamField>
+
+<ParamField path="max_output_tokens" type="int">
+  Maximum number of tokens that can be generated for a response, including visible output tokens and reasoning tokens.
+</ParamField>
+
+<ParamField path="max_tool_calls" type="int">
+  Maximum number of tool calls that can be processed in a single request.
+</ParamField>
+
+<ParamField path="mcp_servers" type="dict">
+  Configuration for Model Context Protocol (MCP) servers to enable tool execution.
+</ParamField>
+
+<ParamField path="metadata" type="dict[str, str]">
+  Metadata to attach to the response. Keys are strings with a maximum length of 64 characters. Values are strings with a maximum length of 512 characters.
+</ParamField>
+
+<ParamField path="model" type="str">
+  The OpenAI model to use. Only OpenAI models are supported for the Responses API (e.g., `gpt-4`, `gpt-4-turbo`, `gpt-3.5-turbo`).
+</ParamField>
+
+<ParamField path="parallel_tool_calls" type="bool">
+  Whether to enable parallel function calling during tool use.
+</ParamField>
+
+<ParamField path="presence_penalty" type="float">
+  Penalizes new tokens based on whether they appear in the text so far. Values between -2.0 and 2.0.
+</ParamField>
+
+<ParamField path="previous_response_id" type="str">
+  The ID of a previous response to continue the conversation from.
+</ParamField>
+
+<ParamField path="prompt" type="dict">
+  Structured prompt configuration for the model.
+</ParamField>
+
+<ParamField path="prompt_cache_key" type="str">
+  Key for caching the prompt to improve performance on repeated requests.
+</ParamField>
+
+<ParamField path="reasoning" type="dict">
+  Configuration for reasoning behavior in models that support it.
+</ParamField>
+
+<ParamField path="safety_identifier" type="str">
+  Identifier for safety and content filtering settings.
+</ParamField>
+
+<ParamField path="service_tier" type="Literal['auto', 'default']">
+  Service tier to use for the request. `auto` will use the best available tier.
+</ParamField>
+
+<ParamField path="store" type="bool">
+  Whether to store the conversation state. Set to `false` for stateless usage.
+</ParamField>
+
+<ParamField path="stream" type="bool" default="false">
+  Whether to stream the response. If `true`, returns a streaming response.
+</ParamField>
+
+<ParamField path="stream_options" type="dict">
+  Additional options for streaming responses.
+</ParamField>
+
+<ParamField path="temperature" type="float">
+  Sampling temperature between 0 and 2. Higher values make output more random.
+</ParamField>
+
+<ParamField path="text" type="dict">
+  Text-specific configuration options.
+</ParamField>
+
+<ParamField path="tool_choice" type="str | dict">
+  Controls which tool (if any) the model should use. Can be `"none"`, `"auto"`, `"required"`, or a specific tool object.
+</ParamField>
+
+<ParamField path="tools" type="list[dict]">
+  List of tools available for the model to call. Each tool is defined with a function schema.
+</ParamField>
+
+<ParamField path="top_logprobs" type="int">
+  Number of most likely tokens to return at each token position (0-20).
+</ParamField>
+
+<ParamField path="top_p" type="float">
+  Nucleus sampling parameter. Alternative to temperature sampling.
+</ParamField>
+
+<ParamField path="truncation" type="Literal['auto', 'disabled']">
+  How to handle input truncation when it exceeds the model's context window.
+</ParamField>
+
+<ParamField path="user" type="str">
+  Unique identifier for the end-user, for abuse monitoring purposes.
+</ParamField>
+
+## Response
+
+Returns a `Response` object containing:
+
+<ResponseField name="id" type="str">
+  Unique identifier for the response.
+</ResponseField>
+
+<ResponseField name="object" type="str">
+  Object type, always `"response"`.
+</ResponseField>
+
+<ResponseField name="created" type="int">
+  Unix timestamp of when the response was created.
+</ResponseField>
+
+<ResponseField name="model" type="str">
+  The model used to generate the response.
+</ResponseField>
+
+<ResponseField name="conversation_id" type="str">
+  ID of the conversation this response belongs to.
+</ResponseField>
+
+<ResponseField name="output" type="list">
+  List of output items from the model response.
+</ResponseField>
+
+<ResponseField name="usage" type="dict">
+  Token usage information for the request.
+  
+  <Expandable title="properties">
+    <ResponseField name="prompt_tokens" type="int">
+      Number of tokens in the prompt.
+    </ResponseField>
+    <ResponseField name="completion_tokens" type="int">
+      Number of tokens in the completion.
+    </ResponseField>
+    <ResponseField name="total_tokens" type="int">
+      Total tokens used.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+```python Sync
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+response = client.responses.create(
+    model="gpt-4",
+    input="What is the capital of France?",
+    instructions="You are a helpful geography assistant.",
+    temperature=0.7,
+)
+
+print(response.id)
+print(response.output)
+```
+
+```python Async
+from dedalus_labs import AsyncDedalus
+
+client = AsyncDedalus()
+
+response = await client.responses.create(
+    model="gpt-4",
+    input="What is the capital of France?",
+    instructions="You are a helpful geography assistant.",
+    temperature=0.7,
+)
+
+print(response.id)
+print(response.output)
+```
+
+```python With conversation state
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+# First response
+response1 = client.responses.create(
+    model="gpt-4",
+    input="My name is Alice.",
+    store=True,
+)
+
+# Continue conversation
+response2 = client.responses.create(
+    model="gpt-4",
+    input="What is my name?",
+    previous_response_id=response1.id,
+    store=True,
+)
+
+print(response2.output)  # Should remember "Alice"
+```
+
+```python With function calling
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "description": "Get the current weather in a location",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city name"
+                    }
+                },
+                "required": ["location"]
+            }
+        }
+    }
+]
+
+response = client.responses.create(
+    model="gpt-4",
+    input="What's the weather in Paris?",
+    tools=tools,
+)
+
+print(response.output)
+```
+</CodeGroup>
+
+## Notes
+
+<Note>
+  The Responses API is an OpenAI-specific feature and only works with OpenAI models. For multi-provider support, use the [Chat Completions API](/api-reference/chat/completions) instead.
+</Note>
+
+<Info>
+  The Responses API provides built-in conversation state management. Use the `store` parameter to enable stateful conversations, or set it to `false` for stateless usage.
+</Info>
+
+<Warning>
+  When using `previous_response_id` to continue a conversation, make sure the previous response was created with `store=True`.
+</Warning>

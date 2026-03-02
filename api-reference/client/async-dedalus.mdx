@@ -129,8 +129,9 @@ response = await client.images.generate(
 Access optical character recognition endpoints asynchronously.
 
 ```python
-response = await client.ocr.extract(
-    file=open("document.pdf", "rb")
+response = await client.ocr.process(
+    document={"document_url": "data:application/pdf;base64,..."},
+    model="mistral-ocr"
 )
 ```
 
@@ -144,10 +145,13 @@ models = await client.models.list()
 
 ### responses
 
-Access response management endpoints asynchronously.
+Access the OpenAI Responses API asynchronously.
 
 ```python
-response = await client.responses.retrieve(response_id="resp_123")
+response = await client.responses.create(
+    model="gpt-4",
+    input="Hello, how are you?"
+)
 ```
 
 ## Examples

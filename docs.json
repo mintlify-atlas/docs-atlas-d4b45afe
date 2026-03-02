@@ -119,6 +119,12 @@
             ]
           },
           {
+            "group": "Responses",
+            "pages": [
+              "api-reference/responses/create"
+            ]
+          },
+          {
             "group": "Runner",
             "pages": [
               "api-reference/runner/dedalus-runner"
