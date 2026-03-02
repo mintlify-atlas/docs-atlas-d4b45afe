@@ -1,0 +1,353 @@
+---
+title: "Shared Types"
+description: "Common type definitions used across the Dedalus SDK"
+---
+
+## Overview
+
+These types are used throughout the Dedalus SDK for request and response payloads.
+
+## Import
+
+```python
+from dedalus_labs.types import (
+    Credential,
+    DedalusModel,
+    DedalusModelChoice,
+    FunctionDefinition,
+    JSONObjectInput,
+    JSONValueInput,
+    MCPCredentials,
+    MCPServerSpec,
+    MCPServers,
+    MCPToolResult,
+    ModelSettings,
+    Reasoning,
+    ResponseFormatJSONObject,
+    ResponseFormatJSONSchema,
+    ResponseFormatText,
+    ToolChoice,
+    VoiceIDsOrCustomVoice,
+)
+```
+
+## Type Definitions
+
+### DedalusModel
+
+Structured model selection entry used in request payloads. Supports OpenAI-style semantics while enabling optional per-model default settings for Dedalus multi-model routing.
+
+```python
+class DedalusModel(TypedDict):
+    model: str  # Required
+    settings: Optional[ModelSettings]
+```
+
+<ParamField path="model" type="string" required>
+  Model identifier with provider prefix (e.g., `openai/gpt-4`, `anthropic/claude-3-5-sonnet`).
+</ParamField>
+
+<ParamField path="settings" type="ModelSettings">
+  Optional default generation settings (e.g., temperature, max_tokens) applied when this model is selected.
+</ParamField>
+
+### ModelSettings
+
+Default generation parameters for a specific model.
+
+```python
+class ModelSettings(TypedDict):
+    temperature: Optional[float]
+    max_tokens: Optional[int]
+    top_p: Optional[float]
+    top_k: Optional[int]
+    frequency_penalty: Optional[float]
+    presence_penalty: Optional[float]
+    # ... and other model parameters
+```
+
+### DedalusModelChoice
+
+Union type for model specification.
+
+```python
+DedalusModelChoice = Union[str, DedalusModel]
+```
+
+Can be:
+- A string model ID: `"openai/gpt-4"`
+- A DedalusModel object with settings
+
+### FunctionDefinition
+
+Defines a function that can be called by the model.
+
+```python
+class FunctionDefinition(TypedDict):
+    name: str  # Required
+    description: Optional[str]
+    parameters: Optional[Dict[str, Any]]
+    strict: Optional[bool]
+```
+
+<ParamField path="name" type="string" required>
+  Function name.
+</ParamField>
+
+<ParamField path="description" type="string">
+  Function description for the model.
+</ParamField>
+
+<ParamField path="parameters" type="object">
+  JSON Schema describing the function parameters.
+</ParamField>
+
+<ParamField path="strict" type="boolean">
+  Enable strict schema adherence.
+</ParamField>
+
+### ToolChoice
+
+Controls which tools the model can call.
+
+```python
+ToolChoice = Union[
+    Literal["auto", "none", "required"],
+    Dict[str, Any]  # Specific tool selection
+]
+```
+
+Options:
+- `"auto"`: Model decides whether to call tools
+- `"none"`: Model will not call any tools
+- `"required"`: Model must call at least one tool
+- Object: Specify a particular tool to call
+
+### ResponseFormatText
+
+Text response format.
+
+```python
+class ResponseFormatText(TypedDict):
+    type: Literal["text"]  # Required
+```
+
+### ResponseFormatJSONObject
+
+JSON object response format.
+
+```python
+class ResponseFormatJSONObject(TypedDict):
+    type: Literal["json_object"]  # Required
+```
+
+### ResponseFormatJSONSchema
+
+Structured JSON response with schema validation.
+
+```python
+class ResponseFormatJSONSchema(TypedDict):
+    type: Literal["json_schema"]  # Required
+    json_schema: Dict[str, Any]  # Required
+    strict: Optional[bool]
+```
+
+<ParamField path="type" type="string" required>
+  Must be `"json_schema"`.
+</ParamField>
+
+<ParamField path="json_schema" type="object" required>
+  JSON Schema definition for the response structure.
+</ParamField>
+
+<ParamField path="strict" type="boolean">
+  Enable strict schema validation.
+</ParamField>
+
+### MCPServerSpec
+
+Specification for an MCP (Model Context Protocol) server.
+
+```python
+class MCPServerSpec(TypedDict):
+    slug: Optional[str]
+    url: Optional[str]
+    config: Optional[Dict[str, Any]]
+```
+
+<ParamField path="slug" type="string">
+  Server slug for known MCP servers (e.g., `"filesystem"`, `"github"`).
+</ParamField>
+
+<ParamField path="url" type="string">
+  Custom MCP server URL.
+</ParamField>
+
+<ParamField path="config" type="object">
+  Additional server configuration.
+</ParamField>
+
+### MCPServers
+
+Flexible type for specifying MCP servers.
+
+```python
+MCPServers = Union[
+    str,  # Single slug or URL
+    MCPServerSpec,  # Server specification
+    List[Union[str, MCPServerSpec]],  # Multiple servers
+]
+```
+
+### MCPCredentials
+
+Credentials for MCP server authentication.
+
+```python
+class MCPCredentials(TypedDict):
+    server: str  # Required
+    credentials: Dict[str, str]  # Required
+```
+
+### MCPToolResult
+
+Result from an MCP tool execution.
+
+```python
+class MCPToolResult(BaseModel):
+    tool_name: str
+    result: Any
+    error: Optional[str]
+```
+
+<ResponseField name="tool_name" type="string">
+  Name of the MCP tool that was executed.
+</ResponseField>
+
+<ResponseField name="result" type="any">
+  Result returned by the tool.
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error message if the tool execution failed.
+</ResponseField>
+
+### Credential
+
+Generic credential specification.
+
+```python
+class Credential(TypedDict):
+    type: str  # Required
+    value: str  # Required
+```
+
+### Reasoning
+
+Reasoning/thinking configuration.
+
+```python
+class Reasoning(TypedDict):
+    enabled: bool  # Required
+    budget_tokens: Optional[int]
+```
+
+<ParamField path="enabled" type="boolean" required>
+  Enable extended reasoning.
+</ParamField>
+
+<ParamField path="budget_tokens" type="integer">
+  Token budget for reasoning.
+</ParamField>
+
+### JSONValueInput
+
+Any valid JSON value.
+
+```python
+JSONValueInput = Union[
+    str,
+    int,
+    float,
+    bool,
+    None,
+    Dict[str, "JSONValueInput"],
+    List["JSONValueInput"],
+]
+```
+
+### JSONObjectInput
+
+JSON object type.
+
+```python
+JSONObjectInput = Dict[str, JSONValueInput]
+```
+
+### VoiceIDsOrCustomVoice
+
+Voice selection for audio generation.
+
+```python
+VoiceIDsOrCustomVoice = Union[
+    Literal["alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse"],
+    Dict[str, Any]  # Custom voice configuration
+]
+```
+
+## Usage Examples
+
+### Using DedalusModel
+
+```python
+from dedalus_labs.types import DedalusModel
+
+# Simple string model
+model = "openai/gpt-4"
+
+# Model with settings
+model_with_settings: DedalusModel = {
+    "model": "openai/gpt-4",
+    "settings": {
+        "temperature": 0.7,
+        "max_tokens": 1000
+    }
+}
+```
+
+### Using ToolChoice
+
+```python
+# Auto mode
+tool_choice = "auto"
+
+# Force specific tool
+tool_choice = {
+    "type": "function",
+    "function": {"name": "get_weather"}
+}
+```
+
+### Using Response Formats
+
+```python
+# JSON object
+response_format = {"type": "json_object"}
+
+# JSON schema with validation
+response_format = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "UserProfile",
+        "schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "age": {"type": "integer"}
+            },
+            "required": ["name"]
+        }
+    },
+    "strict": True
+}
+```

@@ -1,0 +1,238 @@
+---
+title: "Create Transcription"
+description: "Transcribe audio files into text using Whisper models"
+---
+
+## Method Signature
+
+```python
+client.audio.transcriptions.create(
+    file: FileTypes,
+    model: str,
+    language: Optional[str] = None,
+    prompt: Optional[str] = None,
+    response_format: Optional[str] = None,
+    temperature: Optional[float] = None
+) -> TranscriptionCreateResponse
+```
+
+## Parameters
+
+<ParamField path="file" type="FileTypes" required>
+  The audio file to transcribe. Supported formats include:
+  - mp3
+  - mp4
+  - mpeg
+  - mpga
+  - m4a
+  - wav
+  - webm
+  
+  Maximum file size is 25 MB.
+</ParamField>
+
+<ParamField path="model" type="str" required>
+  Model ID to use for transcription (e.g., `"openai/whisper-1"`).
+</ParamField>
+
+<ParamField path="language" type="str">
+  The language of the input audio in ISO-639-1 format (e.g., `"en"`, `"es"`, `"fr"`). Supplying the input language improves accuracy and latency.
+</ParamField>
+
+<ParamField path="prompt" type="str">
+  An optional text to guide the model's style or continue a previous audio segment. The prompt should match the audio language.
+</ParamField>
+
+<ParamField path="response_format" type="str">
+  The format of the transcript output. Supported formats:
+  - `json` (default) - Simple JSON with text
+  - `text` - Plain text
+  - `srt` - SubRip subtitle format
+  - `verbose_json` - JSON with detailed metadata
+  - `vtt` - Web Video Text Tracks format
+</ParamField>
+
+<ParamField path="temperature" type="float">
+  The sampling temperature, between 0 and 1. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic.
+</ParamField>
+
+## Response
+
+The response varies based on the `response_format` parameter:
+
+### JSON Format (default)
+
+<ResponseField name="text" type="str">
+  The transcribed text.
+</ResponseField>
+
+<ResponseField name="logprobs" type="List[LogprobItem]">
+  The log probabilities of the tokens in the transcription. Only returned with models `gpt-4o-transcribe` and `gpt-4o-mini-transcribe` if `logprobs` is added to the `include` array.
+  
+  <Expandable title="LogprobItem properties">
+    <ResponseField name="token" type="str">
+      The token in the transcription.
+    </ResponseField>
+    
+    <ResponseField name="logprob" type="float">
+      The log probability of the token.
+    </ResponseField>
+    
+    <ResponseField name="bytes" type="List[float]">
+      The bytes of the token.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="usage" type="Usage">
+  Token usage statistics for the request.
+</ResponseField>
+
+### Verbose JSON Format
+
+<ResponseField name="text" type="str">
+  The transcribed text.
+</ResponseField>
+
+<ResponseField name="language" type="str">
+  The language of the input audio.
+</ResponseField>
+
+<ResponseField name="duration" type="float">
+  The duration of the input audio.
+</ResponseField>
+
+<ResponseField name="words" type="List[Word]">
+  Extracted words and their corresponding timestamps.
+  
+  <Expandable title="Word properties">
+    <ResponseField name="word" type="str">
+      The text content of the word.
+    </ResponseField>
+    
+    <ResponseField name="start" type="float">
+      Start time of the word in seconds.
+    </ResponseField>
+    
+    <ResponseField name="end" type="float">
+      End time of the word in seconds.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="segments" type="List[Segment]">
+  Segments of the transcribed text and their corresponding details.
+  
+  <Expandable title="Segment properties">
+    <ResponseField name="id" type="int">
+      Unique identifier of the segment.
+    </ResponseField>
+    
+    <ResponseField name="text" type="str">
+      Text content of the segment.
+    </ResponseField>
+    
+    <ResponseField name="start" type="float">
+      Start time of the segment in seconds.
+    </ResponseField>
+    
+    <ResponseField name="end" type="float">
+      End time of the segment in seconds.
+    </ResponseField>
+    
+    <ResponseField name="tokens" type="List[int]">
+      Array of token IDs for the text content.
+    </ResponseField>
+    
+    <ResponseField name="temperature" type="float">
+      Temperature parameter used for generating the segment.
+    </ResponseField>
+    
+    <ResponseField name="avg_logprob" type="float">
+      Average logprob of the segment. If the value is lower than -1, consider the logprobs failed.
+    </ResponseField>
+    
+    <ResponseField name="compression_ratio" type="float">
+      Compression ratio of the segment. If the value is greater than 2.4, consider the compression failed.
+    </ResponseField>
+    
+    <ResponseField name="no_speech_prob" type="float">
+      Probability of no speech in the segment. If the value is higher than 1.0 and the avg_logprob is below -1, consider this segment silent.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="usage" type="Usage">
+  Usage statistics for models billed by audio input duration.
+</ResponseField>
+
+## Examples
+
+```python
+from dedalus_labs import DedalusLabs
+
+client = DedalusLabs()
+
+# Basic transcription
+with open("audio.mp3", "rb") as audio_file:
+    transcription = client.audio.transcriptions.create(
+        file=audio_file,
+        model="openai/whisper-1"
+    )
+
+print(transcription.text)
+```
+
+```python
+# Transcription with language hint for better accuracy
+with open("spanish_audio.wav", "rb") as audio_file:
+    transcription = client.audio.transcriptions.create(
+        file=audio_file,
+        model="openai/whisper-1",
+        language="es"
+    )
+
+print(transcription.text)
+```
+
+```python
+# Get detailed transcription with timestamps
+with open("interview.m4a", "rb") as audio_file:
+    transcription = client.audio.transcriptions.create(
+        file=audio_file,
+        model="openai/whisper-1",
+        response_format="verbose_json"
+    )
+
+print(f"Language: {transcription.language}")
+print(f"Duration: {transcription.duration}s")
+
+for word in transcription.words:
+    print(f"{word.start:.2f}s - {word.end:.2f}s: {word.word}")
+```
+
+```python
+# Generate SRT subtitle file
+with open("video_audio.mp3", "rb") as audio_file:
+    srt_output = client.audio.transcriptions.create(
+        file=audio_file,
+        model="openai/whisper-1",
+        response_format="srt"
+    )
+
+with open("subtitles.srt", "w") as f:
+    f.write(srt_output.text)
+```
+
+```python
+# Use prompt to guide transcription style
+with open("meeting.wav", "rb") as audio_file:
+    transcription = client.audio.transcriptions.create(
+        file=audio_file,
+        model="openai/whisper-1",
+        prompt="This is a business meeting discussing Q4 results and strategy.",
+        temperature=0.2
+    )
+
+print(transcription.text)
+```

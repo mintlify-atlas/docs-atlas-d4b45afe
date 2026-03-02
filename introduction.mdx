@@ -1,0 +1,95 @@
+---
+title: Introduction
+description: The Dedalus Python library provides convenient access to the Dedalus REST API from any Python 3.9+ application with full type safety and async support
+---
+
+The Dedalus Python library provides convenient access to the Dedalus REST API from any Python 3.9+ application. The library includes type definitions for all request params and response fields, and offers both synchronous and asynchronous clients powered by [httpx](https://github.com/encode/httpx).
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install the Dedalus SDK using pip, uv, or your preferred package manager
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get started with your first API call in minutes
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference">
+    Explore the complete API reference documentation
+  </Card>
+  <Card title="GitHub" icon="github" href="https://github.com/dedalus-labs/dedalus-sdk-python">
+    View the source code and contribute on GitHub
+  </Card>
+</CardGroup>
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Type safety" icon="shield-check">
+    Full TypedDict support for request parameters and Pydantic models for responses with autocomplete in your editor
+  </Card>
+  <Card title="Async support" icon="bolt">
+    Built-in async/await support with both httpx and aiohttp backends for optimal performance
+  </Card>
+  <Card title="Streaming" icon="stream">
+    Server-sent events (SSE) streaming for real-time chat completions
+  </Card>
+  <Card title="Error handling" icon="triangle-exclamation">
+    Comprehensive error types with automatic retries and configurable timeouts
+  </Card>
+</CardGroup>
+
+## Requirements
+
+Python 3.9 or higher is required to use the Dedalus SDK.
+
+## Environment support
+
+The SDK supports both production and development environments:
+
+<CodeGroup>
+```python Production
+import os
+from dedalus_labs import Dedalus
+
+client = Dedalus(
+    api_key=os.environ.get("DEDALUS_API_KEY"),
+    environment="production",  # This is the default
+)
+```
+
+```python Development
+import os
+from dedalus_labs import Dedalus
+
+client = Dedalus(
+    api_key=os.environ.get("DEDALUS_API_KEY"),
+    environment="development",
+)
+```
+</CodeGroup>
+
+<Note>
+  The production environment points to `https://api.dedaluslabs.ai` and development points to `http://localhost:4010`.
+</Note>
+
+## MCP Server
+
+Use the Dedalus MCP Server to enable AI assistants to interact with this API, allowing them to explore endpoints, make test requests, and use documentation to help integrate this SDK into your application.
+
+[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en-US/install-mcp?name=dedalus-labs-mcp&config=eyJuYW1lIjoiZGVkYWx1cy1sYWJzLW1jcCIsInRyYW5zcG9ydCI6Imh0dHAiLCJ1cmwiOiJodHRwczovL2RlZGFsdXMtc2RrLnN0bG1jcC5jb20iLCJoZWFkZXJzIjp7IngtZGVkYWx1cy1hcGkta2V5IjoiTXkgQVBJIEtleSIsIngtYXBpLWtleSI6Ik15IFggQVBJIEtleSJ9fQ)
+
+<Warning>
+  You may need to set environment variables in your MCP client for authentication.
+</Warning>
+
+## Next steps
+
+Ready to get started? Follow our installation guide to set up the SDK, then explore the quickstart to make your first API call.
+
+<CardGroup cols={2}>
+  <Card title="Install the SDK" icon="download" href="/installation">
+    Follow the installation guide
+  </Card>
+  <Card title="Make your first call" icon="play" href="/quickstart">
+    Complete the quickstart tutorial
+  </Card>
+</CardGroup>

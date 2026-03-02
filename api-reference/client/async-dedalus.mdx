@@ -1,0 +1,267 @@
+---
+title: AsyncDedalus
+description: Asynchronous client for the Dedalus API
+---
+
+## Constructor
+
+Creates a new asynchronous Dedalus client instance.
+
+```python
+from dedalus_labs import AsyncDedalus
+import asyncio
+
+async def main():
+    client = AsyncDedalus(
+        api_key="your-api-key",
+        environment="production"
+    )
+    # Use the client
+    await client.close()
+
+asyncio.run(main())
+```
+
+### Parameters
+
+<ParamField path="api_key" type="str | None">
+  API key for authentication. If not provided, reads from `DEDALUS_API_KEY` environment variable.
+</ParamField>
+
+<ParamField path="x_api_key" type="str | None">
+  Alternative API key for x-api-key header authentication. If not provided, reads from `DEDALUS_X_API_KEY` environment variable.
+</ParamField>
+
+<ParamField path="as_base_url" type="str | None">
+  Base URL for the AS service. If not provided, reads from `DEDALUS_AS_URL` environment variable or defaults to `https://as.dedaluslabs.ai`.
+</ParamField>
+
+<ParamField path="dedalus_org_id" type="str | None">
+  Organization ID for multi-tenant scenarios. If not provided, reads from `DEDALUS_ORG_ID` environment variable.
+</ParamField>
+
+<ParamField path="provider" type="str | None">
+  Provider name for routing requests. If not provided, reads from `DEDALUS_PROVIDER` environment variable.
+</ParamField>
+
+<ParamField path="provider_key" type="str | None">
+  Provider-specific API key. If not provided, reads from `DEDALUS_PROVIDER_KEY` environment variable.
+</ParamField>
+
+<ParamField path="provider_model" type="str | None">
+  Provider-specific model identifier. If not provided, reads from `DEDALUS_PROVIDER_MODEL` environment variable.
+</ParamField>
+
+<ParamField path="environment" type="Literal['production', 'development']">
+  Environment to use. Options are `production` (https://api.dedaluslabs.ai) or `development` (http://localhost:4010). Defaults to `production`.
+</ParamField>
+
+<ParamField path="base_url" type="str | httpx.URL | None">
+  Override base URL for API requests. If not provided, uses the URL from the `environment` parameter or `DEDALUS_BASE_URL` environment variable.
+</ParamField>
+
+<ParamField path="timeout" type="float | Timeout | None">
+  Request timeout in seconds. Can be a float for a simple timeout or a `Timeout` object for more granular control.
+</ParamField>
+
+<ParamField path="max_retries" type="int" default="2">
+  Maximum number of retries for failed requests.
+</ParamField>
+
+<ParamField path="default_headers" type="Mapping[str, str] | None">
+  Default headers to include in all requests.
+</ParamField>
+
+<ParamField path="http_client" type="httpx.AsyncClient | None">
+  Custom httpx async client instance. Use `DefaultAsyncHttpxClient` to retain default values for limits, timeout, and follow_redirects.
+</ParamField>
+
+## Resource accessors
+
+The client provides access to various API resources through the following properties:
+
+### chat
+
+Access chat completion endpoints asynchronously.
+
+```python
+response = await client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+```
+
+### embeddings
+
+Access text embedding endpoints asynchronously.
+
+```python
+response = await client.embeddings.create(
+    model="text-embedding-ada-002",
+    input="Your text here"
+)
+```
+
+### audio
+
+Access audio processing endpoints asynchronously.
+
+```python
+response = await client.audio.transcriptions.create(
+    file=open("audio.mp3", "rb"),
+    model="whisper-1"
+)
+```
+
+### images
+
+Access image generation and manipulation endpoints asynchronously.
+
+```python
+response = await client.images.generate(
+    prompt="A beautiful sunset",
+    model="dall-e-3"
+)
+```
+
+### ocr
+
+Access optical character recognition endpoints asynchronously.
+
+```python
+response = await client.ocr.extract(
+    file=open("document.pdf", "rb")
+)
+```
+
+### models
+
+Access model information endpoints asynchronously.
+
+```python
+models = await client.models.list()
+```
+
+### responses
+
+Access response management endpoints asynchronously.
+
+```python
+response = await client.responses.retrieve(response_id="resp_123")
+```
+
+## Examples
+
+### Basic initialization
+
+```python
+from dedalus_labs import AsyncDedalus
+import asyncio
+
+async def main():
+    client = AsyncDedalus(api_key="your-api-key")
+    # Use the client
+    await client.close()
+
+asyncio.run(main())
+```
+
+### Using as context manager
+
+```python
+from dedalus_labs import AsyncDedalus
+import asyncio
+
+async def main():
+    async with AsyncDedalus(api_key="your-api-key") as client:
+        response = await client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": "Hello!"}]
+        )
+        print(response)
+
+asyncio.run(main())
+```
+
+### Custom configuration
+
+```python
+from dedalus_labs import AsyncDedalus, Timeout
+import asyncio
+
+async def main():
+    client = AsyncDedalus(
+        api_key="your-api-key",
+        environment="production",
+        timeout=Timeout(30.0, connect=5.0),
+        max_retries=3,
+        default_headers={"X-Custom-Header": "value"}
+    )
+    # Use the client
+    await client.close()
+
+asyncio.run(main())
+```
+
+### Using environment variables
+
+```python
+import os
+import asyncio
+from dedalus_labs import AsyncDedalus
+
+os.environ["DEDALUS_API_KEY"] = "your-api-key"
+os.environ["DEDALUS_PROVIDER"] = "openai"
+
+async def main():
+    # Client will automatically read from environment variables
+    async with AsyncDedalus() as client:
+        response = await client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": "Hello!"}]
+        )
+
+asyncio.run(main())
+```
+
+### With custom provider
+
+```python
+import asyncio
+from dedalus_labs import AsyncDedalus
+
+async def main():
+    client = AsyncDedalus(
+        api_key="your-api-key",
+        provider="anthropic",
+        provider_key="anthropic-api-key",
+        provider_model="claude-3-opus"
+    )
+    # Use the client
+    await client.close()
+
+asyncio.run(main())
+```
+
+### Concurrent requests
+
+```python
+import asyncio
+from dedalus_labs import AsyncDedalus
+
+async def main():
+    async with AsyncDedalus(api_key="your-api-key") as client:
+        # Make multiple concurrent requests
+        tasks = [
+            client.chat.completions.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": f"Question {i}"}]
+            )
+            for i in range(5)
+        ]
+        responses = await asyncio.gather(*tasks)
+        for response in responses:
+            print(response)
+
+asyncio.run(main())
+```

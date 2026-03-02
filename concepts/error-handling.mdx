@@ -1,0 +1,510 @@
+---
+title: Error handling
+description: Handle API errors, network failures, validation errors, and rate limits gracefully
+---
+
+## Overview
+
+The Dedalus SDK provides a comprehensive exception hierarchy for handling different types of errors that can occur during API interactions. All exceptions inherit from the base `DedalusError` class.
+
+## Exception hierarchy
+
+```python
+DedalusError (base exception)
+├── APIError
+│   ├── APIStatusError (4xx and 5xx responses)
+│   │   ├── BadRequestError (400)
+│   │   ├── AuthenticationError (401)
+│   │   ├── PermissionDeniedError (403)
+│   │   ├── NotFoundError (404)
+│   │   ├── ConflictError (409)
+│   │   ├── UnprocessableEntityError (422)
+│   │   ├── RateLimitError (429)
+│   │   └── InternalServerError (5xx)
+│   ├── APIConnectionError
+│   │   └── APITimeoutError
+│   └── APIResponseValidationError
+├── LengthFinishReasonError
+└── ContentFilterFinishReasonError
+```
+
+## Importing exceptions
+
+```python
+from dedalus_labs import (
+    DedalusError,
+    APIError,
+    APIStatusError,
+    BadRequestError,
+    AuthenticationError,
+    PermissionDeniedError,
+    NotFoundError,
+    ConflictError,
+    UnprocessableEntityError,
+    RateLimitError,
+    InternalServerError,
+    APIConnectionError,
+    APITimeoutError,
+    APIResponseValidationError,
+)
+from dedalus_labs._exceptions import (
+    LengthFinishReasonError,
+    ContentFilterFinishReasonError,
+)
+```
+
+## Common error patterns
+
+### Basic error handling
+
+```python
+from dedalus_labs import Dedalus, APIError
+
+client = Dedalus(api_key="your-api-key")
+
+try:
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": "Hello!"}]
+    )
+    print(response.choices[0].message.content)
+except APIError as e:
+    print(f"API error occurred: {e.message}")
+    print(f"Status code: {e.status_code}")
+    print(f"Request ID: {e.request_id}")
+```
+
+### Handling specific status codes
+
+```python
+from dedalus_labs import (
+    Dedalus,
+    AuthenticationError,
+    RateLimitError,
+    InternalServerError,
+)
+
+client = Dedalus(api_key="your-api-key")
+
+try:
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": "Hello!"}]
+    )
+except AuthenticationError as e:
+    print(f"Authentication failed: {e.message}")
+    print("Please check your API key")
+except RateLimitError as e:
+    print(f"Rate limit exceeded: {e.message}")
+    print("Please try again later")
+except InternalServerError as e:
+    print(f"Server error: {e.message}")
+    print("Please contact support if this persists")
+```
+
+## HTTP status code errors
+
+### 400 Bad Request
+
+```python
+from dedalus_labs import Dedalus, BadRequestError
+
+client = Dedalus(api_key="your-api-key")
+
+try:
+    response = client.chat.completions.create(
+        model="invalid-model",
+        messages=[{"role": "user", "content": "Hello"}]
+    )
+except BadRequestError as e:
+    print(f"Invalid request: {e.message}")
+    print(f"Error code: {e.code}")
+    print(f"Error type: {e.type}")
+    print(f"Parameter: {e.param}")
+```
+
+### 401 Authentication Error
+
+```python
+from dedalus_labs import Dedalus, AuthenticationError
+
+try:
+    client = Dedalus(api_key="invalid-key")
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": "Hello"}]
+    )
+except AuthenticationError as e:
+    print("Invalid API key or authentication failed")
+    print(f"Details: {e.message}")
+    # Re-authenticate or prompt user for valid credentials
+```
+
+### 403 Permission Denied
+
+```python
+from dedalus_labs import Dedalus, PermissionDeniedError
+
+client = Dedalus(api_key="your-api-key")
+
+try:
+    response = client.chat.completions.create(
+        model="restricted-model",
+        messages=[{"role": "user", "content": "Hello"}]
+    )
+except PermissionDeniedError as e:
+    print(f"Access denied: {e.message}")
+    print("You may not have access to this resource")
+```
+
+### 404 Not Found
+
+```python
+from dedalus_labs import Dedalus, NotFoundError
+
+client = Dedalus(api_key="your-api-key")
+
+try:
+    response = client.chat.completions.create(
+        model="non-existent-model",
+        messages=[{"role": "user", "content": "Hello"}]
+    )
+except NotFoundError as e:
+    print(f"Resource not found: {e.message}")
+    print("The model or endpoint may not exist")
+```
+
+### 422 Unprocessable Entity
+
+```python
+from dedalus_labs import Dedalus, UnprocessableEntityError
+
+client = Dedalus(api_key="your-api-key")
+
+try:
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[],  # Empty messages
+        max_tokens=-1  # Invalid parameter
+    )
+except UnprocessableEntityError as e:
+    print(f"Validation error: {e.message}")
+    print(f"Parameter: {e.param}")
+    print(f"Error body: {e.body}")
+```
+
+### 429 Rate Limit Error
+
+```python
+import time
+from dedalus_labs import Dedalus, RateLimitError
+
+client = Dedalus(api_key="your-api-key")
+
+max_retries = 3
+for attempt in range(max_retries):
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": "Hello"}]
+        )
+        break
+    except RateLimitError as e:
+        if attempt < max_retries - 1:
+            wait_time = 2 ** attempt  # Exponential backoff
+            print(f"Rate limited. Waiting {wait_time}s...")
+            time.sleep(wait_time)
+        else:
+            print(f"Rate limit exceeded after {max_retries} attempts")
+            raise
+```
+
+<Info>
+The SDK automatically retries rate limit errors with exponential backoff up to `max_retries` (default: 2). You can configure this when creating the client.
+</Info>
+
+### 500 Internal Server Error
+
+```python
+from dedalus_labs import Dedalus, InternalServerError
+
+client = Dedalus(api_key="your-api-key")
+
+try:
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": "Hello"}]
+    )
+except InternalServerError as e:
+    print(f"Server error: {e.message}")
+    print(f"Status code: {e.status_code}")
+    print(f"Request ID: {e.request_id}")
+    print("Please contact support with the request ID")
+```
+
+## Network and connection errors
+
+### Timeout errors
+
+```python
+import httpx
+from dedalus_labs import Dedalus, APITimeoutError
+
+client = Dedalus(
+    api_key="your-api-key",
+    timeout=httpx.Timeout(timeout=10.0, connect=5.0)
+)
+
+try:
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": "Hello"}]
+    )
+except APITimeoutError as e:
+    print("Request timed out")
+    print(f"Details: {e.message}")
+    # Retry with longer timeout or handle gracefully
+```
+
+### Connection errors
+
+```python
+from dedalus_labs import Dedalus, APIConnectionError
+
+client = Dedalus(api_key="your-api-key")
+
+try:
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": "Hello"}]
+    )
+except APIConnectionError as e:
+    print("Connection failed")
+    print(f"Details: {e.message}")
+    print("Check your network connection")
+```
+
+## Validation errors
+
+### Response validation errors
+
+```python
+from dedalus_labs import Dedalus, APIResponseValidationError
+
+client = Dedalus(
+    api_key="your-api-key",
+    _strict_response_validation=True
+)
+
+try:
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": "Hello"}]
+    )
+except APIResponseValidationError as e:
+    print("Invalid response format from API")
+    print(f"Status code: {e.status_code}")
+    print(f"Response body: {e.body}")
+```
+
+## Streaming-specific errors
+
+### Length finish reason error
+
+```python
+from dedalus_labs import Dedalus
+from dedalus_labs._exceptions import LengthFinishReasonError
+from pydantic import BaseModel
+
+class Response(BaseModel):
+    answer: str
+
+client = Dedalus(api_key="your-api-key")
+
+try:
+    with client.chat.completions.stream(
+        model="gpt-4",
+        messages=[{"role": "user", "content": "Explain quantum physics"}],
+        response_format=Response,
+        max_tokens=10  # Too low for structured output
+    ) as stream:
+        for _ in stream:
+            pass
+except LengthFinishReasonError as e:
+    print("Response truncated due to token limit")
+    print(f"Completion: {e.completion}")
+    if e.completion.usage:
+        print(f"Tokens used: {e.completion.usage.total_tokens}")
+```
+
+### Content filter error
+
+```python
+from dedalus_labs import Dedalus
+from dedalus_labs._exceptions import ContentFilterFinishReasonError
+
+client = Dedalus(api_key="your-api-key")
+
+try:
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": "Inappropriate content"}]
+    )
+except ContentFilterFinishReasonError as e:
+    print("Request rejected by content filter")
+    print(f"Details: {e}")
+```
+
+## Accessing error details
+
+All `APIError` exceptions provide detailed information:
+
+```python
+from dedalus_labs import Dedalus, APIStatusError
+
+client = Dedalus(api_key="your-api-key")
+
+try:
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": "Hello"}]
+    )
+except APIStatusError as e:
+    # HTTP response details
+    print(f"Status code: {e.status_code}")  # e.g., 400, 401, 500
+    
+    # Error message
+    print(f"Message: {e.message}")
+    
+    # Request ID for support
+    print(f"Request ID: {e.request_id}")
+    
+    # Error code (if provided)
+    print(f"Error code: {e.code}")
+    
+    # Error type (if provided)
+    print(f"Error type: {e.type}")
+    
+    # Parameter that caused the error
+    print(f"Parameter: {e.param}")
+    
+    # Full response body
+    print(f"Body: {e.body}")
+    
+    # Original HTTP response
+    print(f"Response: {e.response}")
+    
+    # Original HTTP request
+    print(f"Request: {e.request}")
+```
+
+## Complete error handling example
+
+```python
+import time
+import httpx
+from dedalus_labs import (
+    Dedalus,
+    APIError,
+    AuthenticationError,
+    RateLimitError,
+    APITimeoutError,
+    APIConnectionError,
+    InternalServerError,
+)
+
+def chat_with_retry(
+    client: Dedalus,
+    message: str,
+    max_retries: int = 3
+) -> str | None:
+    """Send a chat message with comprehensive error handling."""
+    
+    for attempt in range(max_retries):
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": message}]
+            )
+            return response.choices[0].message.content
+            
+        except AuthenticationError as e:
+            print(f"Authentication failed: {e.message}")
+            print("Please check your API key")
+            return None  # Don't retry auth errors
+            
+        except RateLimitError as e:
+            if attempt < max_retries - 1:
+                wait_time = 2 ** attempt
+                print(f"Rate limited. Retrying in {wait_time}s...")
+                time.sleep(wait_time)
+            else:
+                print("Rate limit exceeded after max retries")
+                return None
+                
+        except APITimeoutError as e:
+            if attempt < max_retries - 1:
+                print(f"Request timed out. Retrying...")
+            else:
+                print("Request timed out after max retries")
+                return None
+                
+        except APIConnectionError as e:
+            if attempt < max_retries - 1:
+                wait_time = 1
+                print(f"Connection failed. Retrying in {wait_time}s...")
+                time.sleep(wait_time)
+            else:
+                print("Connection failed after max retries")
+                return None
+                
+        except InternalServerError as e:
+            if attempt < max_retries - 1:
+                wait_time = 2 ** attempt
+                print(f"Server error. Retrying in {wait_time}s...")
+                print(f"Request ID: {e.request_id}")
+                time.sleep(wait_time)
+            else:
+                print("Server error after max retries")
+                print(f"Request ID: {e.request_id}")
+                return None
+                
+        except APIError as e:
+            # Catch-all for other API errors
+            print(f"API error: {e.message}")
+            print(f"Status: {e.status_code}")
+            return None
+    
+    return None
+
+if __name__ == "__main__":
+    client = Dedalus(
+        api_key="your-api-key",
+        timeout=httpx.Timeout(timeout=30.0, connect=5.0),
+        max_retries=2
+    )
+    
+    result = chat_with_retry(client, "Hello, how are you?")
+    if result:
+        print(f"Response: {result}")
+    else:
+        print("Failed to get response")
+```
+
+## Best practices
+
+<Tip>
+**Always handle authentication errors** - These indicate invalid API keys and should not be retried without user intervention.
+</Tip>
+
+<Tip>
+**Implement exponential backoff for rate limits** - The SDK does this automatically, but you may need additional logic for your use case.
+</Tip>
+
+<Tip>
+**Log request IDs** - When errors occur, log the `request_id` to help with debugging and support requests.
+</Tip>
+
+<Warning>
+Don't catch `DedalusError` or `APIError` without re-raising or handling specific subtypes. This can mask important errors.
+</Warning>

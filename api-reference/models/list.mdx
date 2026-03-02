@@ -1,0 +1,143 @@
+---
+title: "List Models"
+description: "Retrieve the complete list of available models across all providers"
+---
+
+## Overview
+
+Retrieve the complete list of models available to your organization, including models from OpenAI, Anthropic, Google, xAI, Mistral, Fireworks, and DeepSeek.
+
+## Method Signature
+
+```python
+client.models.list() -> ListModelsResponse
+```
+
+## Parameters
+
+This method does not require any parameters.
+
+## Response
+
+<ResponseField name="object" type="string">
+  Response object type. Always `"list"`.
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  List of available models.
+  
+  <Expandable title="Model Object">
+    <ResponseField name="id" type="string">
+      Unique model identifier with provider prefix (e.g., `openai/gpt-4`, `anthropic/claude-3-5-sonnet-20241022`).
+    </ResponseField>
+    
+    <ResponseField name="provider" type="string">
+      Provider that hosts this model. One of: `openai`, `anthropic`, `google`, `xai`, `mistral`, `groq`, `fireworks`, `deepseek`, `moonshot`, `cerebras`.
+    </ResponseField>
+    
+    <ResponseField name="created_at" type="string">
+      When the model was released (RFC 3339 format).
+    </ResponseField>
+    
+    <ResponseField name="display_name" type="string">
+      Human-readable model name.
+    </ResponseField>
+    
+    <ResponseField name="description" type="string">
+      Model description.
+    </ResponseField>
+    
+    <ResponseField name="version" type="string">
+      Model version identifier.
+    </ResponseField>
+    
+    <ResponseField name="capabilities" type="object">
+      Normalized model capabilities across all providers.
+      
+      <Expandable title="Capabilities">
+        <ResponseField name="text" type="boolean">
+          Supports text generation.
+        </ResponseField>
+        
+        <ResponseField name="vision" type="boolean">
+          Supports image understanding.
+        </ResponseField>
+        
+        <ResponseField name="audio" type="boolean">
+          Supports audio processing.
+        </ResponseField>
+        
+        <ResponseField name="image_generation" type="boolean">
+          Supports image generation.
+        </ResponseField>
+        
+        <ResponseField name="tools" type="boolean">
+          Supports function/tool calling.
+        </ResponseField>
+        
+        <ResponseField name="thinking" type="boolean">
+          Supports extended thinking/reasoning.
+        </ResponseField>
+        
+        <ResponseField name="streaming" type="boolean">
+          Supports streaming responses.
+        </ResponseField>
+        
+        <ResponseField name="structured_output" type="boolean">
+          Supports structured JSON output.
+        </ResponseField>
+        
+        <ResponseField name="input_token_limit" type="integer">
+          Maximum input tokens.
+        </ResponseField>
+        
+        <ResponseField name="output_token_limit" type="integer">
+          Maximum output tokens.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="defaults" type="object">
+      Provider-declared default parameters for model generation.
+      
+      <Expandable title="Defaults">
+        <ResponseField name="temperature" type="number">
+          Default temperature setting.
+        </ResponseField>
+        
+        <ResponseField name="max_output_tokens" type="integer">
+          Default maximum output tokens.
+        </ResponseField>
+        
+        <ResponseField name="top_p" type="number">
+          Default top_p setting.
+        </ResponseField>
+        
+        <ResponseField name="top_k" type="integer">
+          Default top_k setting.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="provider_info" type="object">
+      Raw provider-specific metadata.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example
+
+```python
+import dedalus_labs
+
+client = dedalus_labs.Client(api_key="your-api-key")
+
+response = client.models.list()
+
+for model in response.data:
+    print(f"{model.id} - {model.display_name}")
+    print(f"  Provider: {model.provider}")
+    if model.capabilities:
+        print(f"  Supports vision: {model.capabilities.vision}")
+        print(f"  Supports tools: {model.capabilities.tools}")
+```

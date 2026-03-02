@@ -1,0 +1,283 @@
+---
+title: Client configuration
+description: Configure the Dedalus SDK client with API keys, environments, timeouts, retries, and custom headers
+---
+
+## Overview
+
+The Dedalus SDK provides flexible client configuration options for both synchronous (`Dedalus`) and asynchronous (`AsyncDedalus`) clients. You can configure authentication, environments, timeouts, retries, and custom headers.
+
+## Basic initialization
+
+<CodeGroup>
+```python Synchronous client
+from dedalus_labs import Dedalus
+
+client = Dedalus(
+    api_key="your-api-key-here"
+)
+```
+
+```python Asynchronous client
+from dedalus_labs import AsyncDedalus
+
+client = AsyncDedalus(
+    api_key="your-api-key-here"
+)
+```
+</CodeGroup>
+
+## Authentication
+
+The SDK supports two authentication methods:
+
+### Bearer token authentication
+
+```python
+client = Dedalus(
+    api_key="your-api-key-here"
+)
+```
+
+The `api_key` is automatically read from the `DEDALUS_API_KEY` environment variable if not provided:
+
+```python
+import os
+
+os.environ["DEDALUS_API_KEY"] = "your-api-key-here"
+client = Dedalus()  # Automatically uses environment variable
+```
+
+### API key header authentication
+
+```python
+client = Dedalus(
+    x_api_key="your-x-api-key-here"
+)
+```
+
+This is read from `DEDALUS_X_API_KEY` if not provided.
+
+<Note>
+At least one authentication method must be configured. You can use either `api_key` (Bearer token) or `x_api_key` (x-api-key header), or both.
+</Note>
+
+## Environment configuration
+
+The SDK supports two predefined environments:
+
+```python
+from dedalus_labs import Dedalus
+
+# Production environment (default)
+client = Dedalus(
+    api_key="your-api-key",
+    environment="production"  # https://api.dedaluslabs.ai
+)
+
+# Development environment
+client = Dedalus(
+    api_key="your-api-key",
+    environment="development"  # http://localhost:4010
+)
+```
+
+You can also specify a custom base URL:
+
+```python
+client = Dedalus(
+    api_key="your-api-key",
+    base_url="https://custom.api.example.com"
+)
+```
+
+<Warning>
+If both `environment` and `base_url` are provided, `base_url` takes precedence. You can also set `DEDALUS_BASE_URL` as an environment variable.
+</Warning>
+
+## Timeout configuration
+
+Configure request timeouts to control how long the client waits for responses:
+
+```python
+import httpx
+from dedalus_labs import Dedalus
+
+# Simple timeout (60 seconds for all operations)
+client = Dedalus(
+    api_key="your-api-key",
+    timeout=60.0
+)
+
+# Advanced timeout configuration
+client = Dedalus(
+    api_key="your-api-key",
+    timeout=httpx.Timeout(
+        timeout=60.0,      # Total timeout
+        connect=5.0,       # Connection timeout
+        read=30.0,         # Read timeout
+        write=10.0         # Write timeout
+    )
+)
+
+# Disable timeout
+client = Dedalus(
+    api_key="your-api-key",
+    timeout=None
+)
+```
+
+<Info>
+The default timeout is 60 seconds total with a 5 second connection timeout.
+</Info>
+
+## Retry configuration
+
+The SDK automatically retries failed requests with exponential backoff:
+
+```python
+from dedalus_labs import Dedalus
+
+# Default: 2 retries
+client = Dedalus(api_key="your-api-key")
+
+# Custom retry count
+client = Dedalus(
+    api_key="your-api-key",
+    max_retries=5
+)
+
+# Disable retries
+client = Dedalus(
+    api_key="your-api-key",
+    max_retries=0
+)
+```
+
+The retry logic uses:
+- Initial delay: 0.5 seconds
+- Maximum delay: 8 seconds
+- Exponential backoff with jitter
+
+## Custom headers
+
+Add custom headers to all requests:
+
+```python
+client = Dedalus(
+    api_key="your-api-key",
+    default_headers={
+        "X-Custom-Header": "custom-value",
+        "X-Client-ID": "my-application"
+    }
+)
+```
+
+## Provider configuration
+
+Configure provider-specific settings for using your own API keys:
+
+```python
+client = Dedalus(
+    api_key="your-dedalus-api-key",
+    provider="openai",
+    provider_key="your-openai-api-key",
+    provider_model="gpt-4"
+)
+```
+
+These can also be set via environment variables:
+- `DEDALUS_PROVIDER`
+- `DEDALUS_PROVIDER_KEY`
+- `DEDALUS_PROVIDER_MODEL`
+
+## Advanced configuration
+
+### Custom HTTP client
+
+Provide your own HTTPX client for advanced use cases:
+
+```python
+import httpx
+from dedalus_labs import Dedalus
+
+custom_client = httpx.Client(
+    limits=httpx.Limits(
+        max_connections=100,
+        max_keepalive_connections=20
+    ),
+    follow_redirects=True
+)
+
+client = Dedalus(
+    api_key="your-api-key",
+    http_client=custom_client
+)
+```
+
+### Organization ID
+
+Set the organization ID for multi-tenant applications:
+
+```python
+client = Dedalus(
+    api_key="your-api-key",
+    dedalus_org_id="org_123456"
+)
+```
+
+This is read from `DEDALUS_ORG_ID` if not provided.
+
+### Agent scheduler base URL
+
+Configure the agent scheduler URL:
+
+```python
+client = Dedalus(
+    api_key="your-api-key",
+    as_base_url="https://as.dedaluslabs.ai"  # Default value
+)
+```
+
+This is read from `DEDALUS_AS_URL` if not provided.
+
+## Copying and modifying clients
+
+Create a new client based on an existing one with modified settings:
+
+```python
+base_client = Dedalus(api_key="your-api-key")
+
+# Create a copy with a longer timeout
+long_timeout_client = base_client.copy(timeout=120.0)
+
+# Alternative syntax using with_options
+long_timeout_client = base_client.with_options(timeout=120.0)
+```
+
+## Complete example
+
+```python
+import httpx
+from dedalus_labs import Dedalus
+
+client = Dedalus(
+    api_key="your-api-key",
+    environment="production",
+    timeout=httpx.Timeout(timeout=60.0, connect=5.0),
+    max_retries=3,
+    default_headers={
+        "X-Application": "my-app",
+        "X-Version": "1.0.0"
+    },
+    provider="openai",
+    provider_key="your-provider-key",
+    dedalus_org_id="org_123456"
+)
+
+# Use the client
+response = client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+```

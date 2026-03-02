@@ -1,80 +1,318 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get started with the Dedalus Python SDK and make your first API call in minutes
 ---
 
-## Get started in three steps
+## Before you begin
 
-Get your documentation site running locally and make your first customization.
+Make sure you have:
 
-### Step 1: Set up your local environment
+- Python 3.9 or higher installed
+- The Dedalus SDK installed (`pip install dedalus_labs`)
+- Your API key from the Dedalus Labs dashboard
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+## Your first API call
+
+Let's create a simple chat completion to get you started:
+
+<Steps>
+  <Step title="Import and initialize the client">
+    ```python
+    import os
+    from dedalus_labs import Dedalus
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    client = Dedalus(
+        api_key=os.environ.get("DEDALUS_API_KEY"),  # This is the default and can be omitted
+    )
+    ```
+  </Step>
+  
+  <Step title="Create a chat completion">
+    ```python
+    chat_completion = client.chat.completions.create(
+        model="openai/gpt-5-nano",
+        messages=[
+            {
+                "role": "system",
+                "content": "You are Stephen Dedalus. Respond in morose Joycean malaise.",
+            },
+            {
+                "role": "user",
+                "content": "Hello, how are you today?",
+            },
+        ],
+    )
+    print(chat_completion.id)
+    ```
+  </Step>
+</Steps>
+
+<Info>
+  The SDK automatically reads the `DEDALUS_API_KEY` environment variable, so you can omit the `api_key` parameter if it's set.
+</Info>
+
+## Async usage
+
+For async applications, use `AsyncDedalus` instead:
+
+```python
+import os
+import asyncio
+from dedalus_labs import AsyncDedalus
+
+client = AsyncDedalus(
+    api_key=os.environ.get("DEDALUS_API_KEY"),
+)
+
+async def main() -> None:
+    chat_completion = await client.chat.completions.create(
+        model="openai/gpt-5-nano",
+        messages=[
+            {
+                "role": "system",
+                "content": "You are Stephen Dedalus. Respond in morose Joycean malaise.",
+            },
+            {
+                "role": "user",
+                "content": "Hello, how are you today?",
+            },
+        ],
+    )
+    print(chat_completion.id)
+
+asyncio.run(main())
+```
+
+<Note>
+  Functionality between the synchronous and asynchronous clients is identical. Simply use `await` with each API call.
+</Note>
+
+## Streaming responses
+
+The SDK supports streaming for real-time responses using Server-Sent Events (SSE):
+
+<CodeGroup>
+```python Sync
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+stream = client.chat.completions.create(
+    model="openai/gpt-5-nano",
+    stream=True,
+    messages=[
+        {
+            "role": "system",
+            "content": "You are Stephen Dedalus. Respond in morose Joycean malaise.",
+        },
+        {
+            "role": "user",
+            "content": "What do you think of artificial intelligence?",
+        },
+    ],
+)
+for chat_completion in stream:
+    print(chat_completion.id)
+```
+
+```python Async
+from dedalus_labs import AsyncDedalus
+
+client = AsyncDedalus()
+
+stream = await client.chat.completions.create(
+    model="openai/gpt-5-nano",
+    stream=True,
+    messages=[
+        {
+            "role": "system",
+            "content": "You are Stephen Dedalus. Respond in morose Joycean malaise.",
+        },
+        {
+            "role": "user",
+            "content": "What do you think of artificial intelligence?",
+        },
+    ],
+)
+async for chat_completion in stream:
+    print(chat_completion.id)
+```
+</CodeGroup>
+
+## Using aiohttp for better async performance
+
+For improved concurrency with async operations, you can use `aiohttp` as the HTTP backend:
+
+<Steps>
+  <Step title="Install aiohttp support">
+    ```bash
+    pip install dedalus_labs[aiohttp]
+    ```
+  </Step>
+  
+  <Step title="Configure the client">
+    ```python
+    import os
+    import asyncio
+    from dedalus_labs import DefaultAioHttpClient
+    from dedalus_labs import AsyncDedalus
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    async def main() -> None:
+        async with AsyncDedalus(
+            api_key=os.environ.get("DEDALUS_API_KEY"),
+            http_client=DefaultAioHttpClient(),
+        ) as client:
+            chat_completion = await client.chat.completions.create(
+                model="openai/gpt-5-nano",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are Stephen Dedalus. Respond in morose Joycean malaise.",
+                    },
+                    {
+                        "role": "user",
+                        "content": "Hello, how are you today?",
+                    },
+                ],
+            )
+            print(chat_completion.id)
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    asyncio.run(main())
+    ```
+  </Step>
+</Steps>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Working with nested parameters
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Request parameters that are objects are typed as dictionaries using `TypedDict`:
 
-### Step 3: Go live
+```python
+from dedalus_labs import Dedalus
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+client = Dedalus()
+
+chat_completion = client.chat.completions.create(
+    model="openai/gpt-5",
+    audio={
+        "format": "wav",
+        "voice": "string",
+    },
+)
+print(chat_completion.audio)
+```
+
+## File uploads
+
+For endpoints that accept file uploads, you can pass files as bytes, PathLike instances, or tuples:
+
+```python
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+client.audio.transcriptions.create(
+    file=Path("/path/to/file"),
+    model="model",
+)
+```
+
+<Note>
+  The async client uses the same interface and will read files asynchronously when you pass a PathLike instance.
+</Note>
+
+## Error handling
+
+The SDK provides comprehensive error handling with specific error types:
+
+```python
+import dedalus_labs
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+try:
+    client.chat.completions.create(
+        model="openai/gpt-5-nano",
+        messages=[
+            {
+                "role": "system",
+                "content": "You are Stephen Dedalus. Respond in morose Joycean malaise.",
+            },
+            {
+                "role": "user",
+                "content": "Hello, how are you today?",
+            },
+        ],
+    )
+except dedalus_labs.APIConnectionError as e:
+    print("The server could not be reached")
+    print(e.__cause__)  # an underlying Exception, likely raised within httpx.
+except dedalus_labs.RateLimitError as e:
+    print("A 429 status code was received; we should back off a bit.")
+except dedalus_labs.APIStatusError as e:
+    print("Another non-200-range status code was received")
+    print(e.status_code)
+    print(e.response)
+```
+
+### Error types
+
+| Status Code | Error Type                 |
+| ----------- | -------------------------- |
+| 400         | `BadRequestError`          |
+| 401         | `AuthenticationError`      |
+| 403         | `PermissionDeniedError`    |
+| 404         | `NotFoundError`            |
+| 422         | `UnprocessableEntityError` |
+| 429         | `RateLimitError`           |
+| >=500       | `InternalServerError`      |
+| N/A         | `APIConnectionError`       |
+
+<Info>
+  Certain errors are automatically retried 2 times by default with exponential backoff. This includes connection errors, 408 Request Timeout, 409 Conflict, 429 Rate Limit, and 5xx errors.
+</Info>
+
+## Using types
+
+The SDK provides full type safety with TypedDicts for requests and Pydantic models for responses:
+
+```python
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+chat_completion = client.chat.completions.create(
+    model="openai/gpt-5-nano",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+
+# Serialize to JSON
+json_str = chat_completion.to_json()
+
+# Convert to dictionary
+data_dict = chat_completion.to_dict()
+```
+
+<Info>
+  For type errors in VS Code, set `python.analysis.typeCheckingMode` to `basic` to catch bugs earlier.
+</Info>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
+Now that you've made your first API call, explore more features:
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="API Reference" icon="code" href="/api-reference">
+    Browse the complete API reference
+  </Card>
+  <Card title="Error Handling" icon="shield-exclamation" href="/error-handling">
+    Learn about error handling and retries
+  </Card>
+  <Card title="Advanced Usage" icon="sparkles" href="/advanced">
+    Explore timeouts, custom headers, and more
+  </Card>
+  <Card title="GitHub" icon="github" href="https://github.com/dedalus-labs/dedalus-sdk-python">
+    View the source code on GitHub
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

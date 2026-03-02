@@ -1,0 +1,192 @@
+---
+title: Dedalus
+description: Synchronous client for the Dedalus API
+---
+
+## Constructor
+
+Creates a new synchronous Dedalus client instance.
+
+```python
+from dedalus_labs import Dedalus
+
+client = Dedalus(
+    api_key="your-api-key",
+    environment="production"
+)
+```
+
+### Parameters
+
+<ParamField path="api_key" type="str | None">
+  API key for authentication. If not provided, reads from `DEDALUS_API_KEY` environment variable.
+</ParamField>
+
+<ParamField path="x_api_key" type="str | None">
+  Alternative API key for x-api-key header authentication. If not provided, reads from `DEDALUS_X_API_KEY` environment variable.
+</ParamField>
+
+<ParamField path="as_base_url" type="str | None">
+  Base URL for the AS service. If not provided, reads from `DEDALUS_AS_URL` environment variable or defaults to `https://as.dedaluslabs.ai`.
+</ParamField>
+
+<ParamField path="dedalus_org_id" type="str | None">
+  Organization ID for multi-tenant scenarios. If not provided, reads from `DEDALUS_ORG_ID` environment variable.
+</ParamField>
+
+<ParamField path="provider" type="str | None">
+  Provider name for routing requests. If not provided, reads from `DEDALUS_PROVIDER` environment variable.
+</ParamField>
+
+<ParamField path="provider_key" type="str | None">
+  Provider-specific API key. If not provided, reads from `DEDALUS_PROVIDER_KEY` environment variable.
+</ParamField>
+
+<ParamField path="provider_model" type="str | None">
+  Provider-specific model identifier. If not provided, reads from `DEDALUS_PROVIDER_MODEL` environment variable.
+</ParamField>
+
+<ParamField path="environment" type="Literal['production', 'development']">
+  Environment to use. Options are `production` (https://api.dedaluslabs.ai) or `development` (http://localhost:4010). Defaults to `production`.
+</ParamField>
+
+<ParamField path="base_url" type="str | httpx.URL | None">
+  Override base URL for API requests. If not provided, uses the URL from the `environment` parameter or `DEDALUS_BASE_URL` environment variable.
+</ParamField>
+
+<ParamField path="timeout" type="float | Timeout | None">
+  Request timeout in seconds. Can be a float for a simple timeout or a `Timeout` object for more granular control.
+</ParamField>
+
+<ParamField path="max_retries" type="int" default="2">
+  Maximum number of retries for failed requests.
+</ParamField>
+
+<ParamField path="default_headers" type="Mapping[str, str] | None">
+  Default headers to include in all requests.
+</ParamField>
+
+<ParamField path="http_client" type="httpx.Client | None">
+  Custom httpx client instance. Use `DefaultHttpxClient` to retain default values for limits, timeout, and follow_redirects.
+</ParamField>
+
+## Resource accessors
+
+The client provides access to various API resources through the following properties:
+
+### chat
+
+Access chat completion endpoints.
+
+```python
+response = client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+```
+
+### embeddings
+
+Access text embedding endpoints.
+
+```python
+response = client.embeddings.create(
+    model="text-embedding-ada-002",
+    input="Your text here"
+)
+```
+
+### audio
+
+Access audio processing endpoints.
+
+```python
+response = client.audio.transcriptions.create(
+    file=open("audio.mp3", "rb"),
+    model="whisper-1"
+)
+```
+
+### images
+
+Access image generation and manipulation endpoints.
+
+```python
+response = client.images.generate(
+    prompt="A beautiful sunset",
+    model="dall-e-3"
+)
+```
+
+### ocr
+
+Access optical character recognition endpoints.
+
+```python
+response = client.ocr.extract(
+    file=open("document.pdf", "rb")
+)
+```
+
+### models
+
+Access model information endpoints.
+
+```python
+models = client.models.list()
+```
+
+### responses
+
+Access response management endpoints.
+
+```python
+response = client.responses.retrieve(response_id="resp_123")
+```
+
+## Examples
+
+### Basic initialization
+
+```python
+from dedalus_labs import Dedalus
+
+client = Dedalus(api_key="your-api-key")
+```
+
+### Custom configuration
+
+```python
+from dedalus_labs import Dedalus, Timeout
+
+client = Dedalus(
+    api_key="your-api-key",
+    environment="production",
+    timeout=Timeout(30.0, connect=5.0),
+    max_retries=3,
+    default_headers={"X-Custom-Header": "value"}
+)
+```
+
+### Using environment variables
+
+```python
+import os
+
+os.environ["DEDALUS_API_KEY"] = "your-api-key"
+os.environ["DEDALUS_PROVIDER"] = "openai"
+
+# Client will automatically read from environment variables
+client = Dedalus()
+```
+
+### With custom provider
+
+```python
+client = Dedalus(
+    api_key="your-api-key",
+    provider="anthropic",
+    provider_key="anthropic-api-key",
+    provider_model="claude-3-opus"
+)
+```

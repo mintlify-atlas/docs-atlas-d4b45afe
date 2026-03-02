@@ -1,0 +1,419 @@
+---
+title: "Exceptions"
+description: "Error classes and exception handling in the Dedalus SDK"
+---
+
+## Overview
+
+The Dedalus SDK provides a comprehensive exception hierarchy for handling API errors, connection issues, and content-related errors.
+
+## Import
+
+```python
+from dedalus_labs import (
+    DedalusError,
+    APIError,
+    APIStatusError,
+    APIConnectionError,
+    APITimeoutError,
+    APIResponseValidationError,
+    BadRequestError,
+    AuthenticationError,
+    PermissionDeniedError,
+    NotFoundError,
+    ConflictError,
+    UnprocessableEntityError,
+    RateLimitError,
+    InternalServerError,
+    LengthFinishReasonError,
+    ContentFilterFinishReasonError,
+)
+```
+
+## Exception Hierarchy
+
+```
+DedalusError (base exception)
+├── APIError
+│   ├── APIStatusError
+│   │   ├── BadRequestError (400)
+│   │   ├── AuthenticationError (401)
+│   │   ├── PermissionDeniedError (403)
+│   │   ├── NotFoundError (404)
+│   │   ├── ConflictError (409)
+│   │   ├── UnprocessableEntityError (422)
+│   │   ├── RateLimitError (429)
+│   │   └── InternalServerError (5xx)
+│   ├── APIConnectionError
+│   │   └── APITimeoutError
+│   └── APIResponseValidationError
+├── LengthFinishReasonError
+└── ContentFilterFinishReasonError
+```
+
+## Base Exceptions
+
+### DedalusError
+
+Base exception for all Dedalus SDK errors.
+
+```python
+class DedalusError(Exception):
+    pass
+```
+
+### APIError
+
+Base class for all API-related errors.
+
+```python
+class APIError(DedalusError):
+    message: str
+    request: httpx.Request
+    body: object | None
+    code: Optional[str]
+    param: Optional[str]
+    type: Optional[str]
+```
+
+<ResponseField name="message" type="string">
+  Human-readable error message.
+</ResponseField>
+
+<ResponseField name="request" type="httpx.Request">
+  The HTTP request that caused the error.
+</ResponseField>
+
+<ResponseField name="body" type="object">
+  The API response body (decoded JSON or raw response).
+</ResponseField>
+
+<ResponseField name="code" type="string">
+  Error code from the API.
+</ResponseField>
+
+<ResponseField name="param" type="string">
+  Parameter that caused the error (if applicable).
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Error type from the API.
+</ResponseField>
+
+## HTTP Status Errors
+
+### APIStatusError
+
+Raised when an API response has a 4xx or 5xx status code.
+
+```python
+class APIStatusError(APIError):
+    response: httpx.Response
+    status_code: int
+    request_id: str | None
+```
+
+<ResponseField name="response" type="httpx.Response">
+  The HTTP response object.
+</ResponseField>
+
+<ResponseField name="status_code" type="integer">
+  HTTP status code.
+</ResponseField>
+
+<ResponseField name="request_id" type="string">
+  Unique request ID from the `x-request-id` header.
+</ResponseField>
+
+### BadRequestError (400)
+
+The request was malformed or invalid.
+
+```python
+class BadRequestError(APIStatusError):
+    status_code: Literal[400] = 400
+```
+
+**Common Causes:**
+- Invalid parameter values
+- Missing required parameters
+- Malformed JSON
+
+### AuthenticationError (401)
+
+Authentication failed or API key is invalid.
+
+```python
+class AuthenticationError(APIStatusError):
+    status_code: Literal[401] = 401
+```
+
+**Common Causes:**
+- Missing API key
+- Invalid API key
+- Expired API key
+
+### PermissionDeniedError (403)
+
+The API key doesn't have permission to access the requested resource.
+
+```python
+class PermissionDeniedError(APIStatusError):
+    status_code: Literal[403] = 403
+```
+
+**Common Causes:**
+- Insufficient API key permissions
+- Organization-level restrictions
+
+### NotFoundError (404)
+
+The requested resource was not found.
+
+```python
+class NotFoundError(APIStatusError):
+    status_code: Literal[404] = 404
+```
+
+**Common Causes:**
+- Invalid model ID
+- Resource doesn't exist
+- Incorrect endpoint URL
+
+### ConflictError (409)
+
+The request conflicts with the current state.
+
+```python
+class ConflictError(APIStatusError):
+    status_code: Literal[409] = 409
+```
+
+### UnprocessableEntityError (422)
+
+The request was well-formed but couldn't be processed.
+
+```python
+class UnprocessableEntityError(APIStatusError):
+    status_code: Literal[422] = 422
+```
+
+**Common Causes:**
+- Invalid parameter combinations
+- Business logic violations
+
+### RateLimitError (429)
+
+Rate limit exceeded.
+
+```python
+class RateLimitError(APIStatusError):
+    status_code: Literal[429] = 429
+```
+
+**Common Causes:**
+- Too many requests in a short time
+- Quota exceeded
+
+### InternalServerError (5xx)
+
+Server-side error occurred.
+
+```python
+class InternalServerError(APIStatusError):
+    pass
+```
+
+## Connection Errors
+
+### APIConnectionError
+
+Failed to connect to the API.
+
+```python
+class APIConnectionError(APIError):
+    def __init__(self, *, message: str = "Connection error.", request: httpx.Request):
+        ...
+```
+
+**Common Causes:**
+- Network connectivity issues
+- DNS resolution failures
+- Firewall blocking requests
+
+### APITimeoutError
+
+Request timed out.
+
+```python
+class APITimeoutError(APIConnectionError):
+    def __init__(self, request: httpx.Request):
+        super().__init__(message="Request timed out.", request=request)
+```
+
+**Common Causes:**
+- Slow network connection
+- Server taking too long to respond
+- Timeout configured too low
+
+## Validation Errors
+
+### APIResponseValidationError
+
+Response from API doesn't match expected schema.
+
+```python
+class APIResponseValidationError(APIError):
+    response: httpx.Response
+    status_code: int
+```
+
+**Common Causes:**
+- API returned unexpected format
+- Schema mismatch
+- SDK version incompatibility
+
+## Content Errors
+
+### LengthFinishReasonError
+
+Response was truncated due to length limit.
+
+```python
+class LengthFinishReasonError(DedalusError):
+    completion: ChatCompletion
+```
+
+<ResponseField name="completion" type="ChatCompletion">
+  The completion that was truncated. Note: `usage` field may not be included when streaming.
+</ResponseField>
+
+**Common Causes:**
+- Response exceeded `max_tokens` limit
+- Output token limit reached
+
+### ContentFilterFinishReasonError
+
+Request was rejected by content filter.
+
+```python
+class ContentFilterFinishReasonError(DedalusError):
+    pass
+```
+
+**Common Causes:**
+- Content violates safety policies
+- Prompt or response filtered
+
+## Error Handling Examples
+
+### Basic Error Handling
+
+```python
+import dedalus_labs
+from dedalus_labs import (
+    AuthenticationError,
+    RateLimitError,
+    APIConnectionError,
+)
+
+client = dedalus_labs.Client(api_key="your-api-key")
+
+try:
+    response = client.chat.completions.create(
+        model="openai/gpt-4",
+        messages=[{"role": "user", "content": "Hello!"}]
+    )
+except AuthenticationError as e:
+    print(f"Authentication failed: {e.message}")
+except RateLimitError as e:
+    print(f"Rate limit exceeded: {e.message}")
+    print(f"Retry after: {e.response.headers.get('retry-after')}")
+except APIConnectionError as e:
+    print(f"Connection error: {e.message}")
+except dedalus_labs.APIError as e:
+    print(f"API error: {e.message}")
+    print(f"Status code: {e.status_code}")
+    print(f"Request ID: {e.request_id}")
+```
+
+### Handling Specific Status Codes
+
+```python
+from dedalus_labs import APIStatusError, NotFoundError
+
+try:
+    model = client.models.retrieve("invalid/model")
+except NotFoundError:
+    print("Model not found, using default")
+    model = client.models.retrieve("openai/gpt-4")
+except APIStatusError as e:
+    print(f"HTTP {e.status_code}: {e.message}")
+```
+
+### Handling Content Errors
+
+```python
+from dedalus_labs import (
+    LengthFinishReasonError,
+    ContentFilterFinishReasonError,
+)
+
+try:
+    response = client.chat.completions.create(
+        model="openai/gpt-4",
+        messages=[{"role": "user", "content": "Very long prompt..."}],
+        max_tokens=100
+    )
+except LengthFinishReasonError as e:
+    print("Response was truncated")
+    print(f"Partial completion: {e.completion}")
+except ContentFilterFinishReasonError:
+    print("Content was filtered")
+```
+
+### Retry Logic with Exponential Backoff
+
+```python
+import time
+from dedalus_labs import RateLimitError, APIConnectionError
+
+def create_completion_with_retry(client, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            return client.chat.completions.create(
+                model="openai/gpt-4",
+                messages=[{"role": "user", "content": "Hello!"}]
+            )
+        except RateLimitError as e:
+            if attempt == max_retries - 1:
+                raise
+            wait_time = 2 ** attempt  # Exponential backoff
+            print(f"Rate limited. Retrying in {wait_time}s...")
+            time.sleep(wait_time)
+        except APIConnectionError as e:
+            if attempt == max_retries - 1:
+                raise
+            print(f"Connection error. Retrying...")
+            time.sleep(1)
+```
+
+### Accessing Error Details
+
+```python
+from dedalus_labs import APIError
+
+try:
+    response = client.chat.completions.create(
+        model="openai/gpt-4",
+        messages=[{"role": "user", "content": "Hello!"}],
+        temperature=5.0  # Invalid value
+    )
+except APIError as e:
+    print(f"Error message: {e.message}")
+    print(f"Error code: {e.code}")
+    print(f"Error type: {e.type}")
+    print(f"Error param: {e.param}")
+    print(f"Request ID: {getattr(e, 'request_id', None)}")
+    print(f"Response body: {e.body}")
+```

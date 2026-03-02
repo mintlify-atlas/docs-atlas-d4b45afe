@@ -1,0 +1,392 @@
+---
+title: File uploads
+description: Learn how to upload files for audio, image, and OCR operations with the Dedalus Python SDK
+---
+
+The Dedalus Python SDK provides flexible ways to upload files for audio transcription, image operations, and OCR processing.
+
+## File upload methods
+
+The SDK accepts files in multiple formats:
+
+<Tabs>
+  <Tab title="PathLike">
+    Use `Path` objects or string paths for local files:
+
+    ```python
+    from pathlib import Path
+    from dedalus_labs import Dedalus
+
+    client = Dedalus()
+
+    # Using Path object (recommended)
+    transcription = client.audio.transcriptions.create(
+        file=Path("/path/to/audio.mp3"),
+        model="openai/whisper-1"
+    )
+
+    # Using string path
+    transcription = client.audio.transcriptions.create(
+        file="/path/to/audio.mp3",
+        model="openai/whisper-1"
+    )
+    ```
+  </Tab>
+  <Tab title="Bytes">
+    Upload raw bytes directly:
+
+    ```python
+    from dedalus_labs import Dedalus
+
+    client = Dedalus()
+
+    # Read file into memory
+    with open("/path/to/audio.mp3", "rb") as f:
+        file_bytes = f.read()
+
+    transcription = client.audio.transcriptions.create(
+        file=file_bytes,
+        model="openai/whisper-1"
+    )
+    ```
+  </Tab>
+  <Tab title="Tuple">
+    Specify filename and media type explicitly:
+
+    ```python
+    from dedalus_labs import Dedalus
+
+    client = Dedalus()
+
+    with open("/path/to/audio.mp3", "rb") as f:
+        file_bytes = f.read()
+
+    # Tuple format: (filename, content, media_type)
+    transcription = client.audio.transcriptions.create(
+        file=("audio.mp3", file_bytes, "audio/mpeg"),
+        model="openai/whisper-1"
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Audio file uploads
+
+### Transcription
+
+```python
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+# Upload audio for transcription
+transcription = client.audio.transcriptions.create(
+    file=Path("/path/to/recording.mp3"),
+    model="openai/whisper-1",
+    language="en"
+)
+
+print(transcription.text)
+```
+
+<Info>
+  **Supported audio formats:**
+  - mp3
+  - mp4
+  - mpeg
+  - mpga
+  - m4a
+  - wav
+  - webm
+
+  **Maximum file size:** 25 MB
+</Info>
+
+### From URL or stream
+
+```python
+import requests
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+# Download audio from URL
+audio_url = "https://example.com/audio.mp3"
+audio_bytes = requests.get(audio_url).content
+
+# Upload to Dedalus
+transcription = client.audio.transcriptions.create(
+    file=("downloaded.mp3", audio_bytes, "audio/mpeg"),
+    model="openai/whisper-1"
+)
+```
+
+## Image file uploads
+
+### Image editing
+
+```python
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+# Upload image and mask for editing
+response = client.images.edit(
+    image=Path("/path/to/image.png"),
+    mask=Path("/path/to/mask.png"),  # Optional
+    prompt="Add a red hat to the person",
+    model="openai/dall-e-2"
+)
+
+print(response.data[0].url)
+```
+
+<Warning>
+  **Image requirements:**
+  - Must be square PNG files
+  - Maximum size: 4 MB
+  - For editing without a mask, image must have transparency (alpha channel)
+</Warning>
+
+### Image variations
+
+```python
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+response = client.images.create_variation(
+    image=Path("/path/to/image.png"),
+    model="openai/dall-e-2",
+    n=3,
+    size="512x512"
+)
+
+for i, image in enumerate(response.data):
+    print(f"Variation {i+1}: {image.url}")
+```
+
+## OCR document uploads
+
+Documents for OCR must be base64-encoded data URIs:
+
+```python
+import base64
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+def prepare_document(file_path: Path):
+    """Prepare a document for OCR upload."""
+    media_types = {
+        ".pdf": "application/pdf",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+    }
+    
+    suffix = file_path.suffix.lower()
+    media_type = media_types.get(suffix, "application/octet-stream")
+    
+    with file_path.open("rb") as f:
+        document_bytes = f.read()
+    
+    document_b64 = base64.b64encode(document_bytes).decode('utf-8')
+    return {"document_url": f"data:{media_type};base64,{document_b64}"}
+
+# Upload document for OCR
+response = client.ocr.process(
+    document=prepare_document(Path("/path/to/document.pdf"))
+)
+
+print(response.text)
+```
+
+## Async file uploads
+
+File uploads work seamlessly with async clients:
+
+```python
+import asyncio
+from pathlib import Path
+from dedalus_labs import AsyncDedalus
+
+client = AsyncDedalus()
+
+async def transcribe_files(file_paths):
+    """Transcribe multiple files concurrently."""
+    tasks = [
+        client.audio.transcriptions.create(
+            file=file_path,
+            model="openai/whisper-1"
+        )
+        for file_path in file_paths
+    ]
+    
+    results = await asyncio.gather(*tasks)
+    return results
+
+async def main():
+    files = [
+        Path("/path/to/audio1.mp3"),
+        Path("/path/to/audio2.mp3"),
+        Path("/path/to/audio3.mp3"),
+    ]
+    
+    transcriptions = await transcribe_files(files)
+    
+    for i, transcription in enumerate(transcriptions, 1):
+        print(f"File {i}: {transcription.text[:100]}...")
+
+asyncio.run(main())
+```
+
+<Note>
+  When using `PathLike` with the async client, file contents are read asynchronously automatically.
+</Note>
+
+## Memory-efficient uploads
+
+For large files, avoid loading entire file into memory:
+
+```python
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+# Let the SDK handle file reading
+transcription = client.audio.transcriptions.create(
+    file=Path("/path/to/large_audio.mp3"),  # File is streamed
+    model="openai/whisper-1"
+)
+```
+
+## File validation
+
+Validate files before upload:
+
+```python
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+def validate_audio_file(file_path: Path) -> bool:
+    """Validate audio file before upload."""
+    # Check file exists
+    if not file_path.exists():
+        print(f"File not found: {file_path}")
+        return False
+    
+    # Check file size (25 MB limit)
+    max_size = 25 * 1024 * 1024  # 25 MB in bytes
+    if file_path.stat().st_size > max_size:
+        print(f"File too large: {file_path.stat().st_size / 1024 / 1024:.2f} MB")
+        return False
+    
+    # Check file extension
+    valid_extensions = {".mp3", ".mp4", ".mpeg", ".mpga", ".m4a", ".wav", ".webm"}
+    if file_path.suffix.lower() not in valid_extensions:
+        print(f"Unsupported format: {file_path.suffix}")
+        return False
+    
+    return True
+
+client = Dedalus()
+audio_file = Path("/path/to/audio.mp3")
+
+if validate_audio_file(audio_file):
+    transcription = client.audio.transcriptions.create(
+        file=audio_file,
+        model="openai/whisper-1"
+    )
+    print(transcription.text)
+```
+
+## Error handling
+
+```python
+import dedalus_labs
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+try:
+    transcription = client.audio.transcriptions.create(
+        file=Path("/path/to/audio.mp3"),
+        model="openai/whisper-1"
+    )
+    print(transcription.text)
+    
+except FileNotFoundError:
+    print("File not found")
+except dedalus_labs.BadRequestError as e:
+    print(f"Invalid file: {e.message}")
+    # Common causes: file too large, unsupported format, corrupt file
+except dedalus_labs.APIConnectionError as e:
+    print(f"Upload failed: {e}")
+    # Network error during upload
+except dedalus_labs.APIStatusError as e:
+    print(f"API error: {e.status_code}")
+```
+
+## Complete example
+
+Robust file upload with validation and error handling:
+
+```python
+from pathlib import Path
+from typing import Optional
+import dedalus_labs
+from dedalus_labs import Dedalus
+
+def upload_and_transcribe(file_path: Path) -> Optional[str]:
+    """Upload audio file and return transcription."""
+    # Validate file
+    if not file_path.exists():
+        print(f"Error: File not found: {file_path}")
+        return None
+    
+    # Check size
+    max_size = 25 * 1024 * 1024
+    file_size = file_path.stat().st_size
+    if file_size > max_size:
+        print(f"Error: File too large ({file_size / 1024 / 1024:.2f} MB)")
+        return None
+    
+    # Upload and process
+    client = Dedalus()
+    
+    try:
+        print(f"Uploading {file_path.name} ({file_size / 1024:.2f} KB)...")
+        
+        transcription = client.audio.transcriptions.create(
+            file=file_path,
+            model="openai/whisper-1",
+            response_format="text"
+        )
+        
+        print("✓ Transcription complete")
+        return transcription
+        
+    except dedalus_labs.BadRequestError as e:
+        print(f"Error: Invalid request - {e.message}")
+        return None
+    except dedalus_labs.APIConnectionError as e:
+        print(f"Error: Network error - {e}")
+        return None
+    except Exception as e:
+        print(f"Error: Unexpected error - {e}")
+        return None
+
+# Usage
+audio_file = Path("/path/to/audio.mp3")
+text = upload_and_transcribe(audio_file)
+
+if text:
+    print(f"\nTranscribed text:\n{text}")
+```

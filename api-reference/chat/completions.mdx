@@ -1,0 +1,507 @@
+---
+title: Chat completions
+description: Create a chat completion with the Dedalus API
+---
+
+## Create chat completion
+
+<ParamField path="model" type="string | list | DedalusModel" required>
+  Model identifier. Accepts model ID strings, lists for routing, or DedalusModel objects with per-model settings.
+</ParamField>
+
+<ParamField path="messages" type="array">
+  Conversation history (OpenAI: messages, Google: contents, Responses: input).
+
+  Each message should have:
+  - `role`: "system" | "user" | "assistant" | "tool" | "function" | "developer"
+  - `content`: string | array of content parts
+</ParamField>
+
+### Configuration parameters
+
+<ParamField path="temperature" type="float">
+  Sampling temperature (0-2 for most providers). Higher values make output more random.
+</ParamField>
+
+<ParamField path="max_tokens" type="int">
+  Maximum tokens in completion.
+</ParamField>
+
+<ParamField path="max_completion_tokens" type="int">
+  Maximum tokens in completion (newer parameter name).
+</ParamField>
+
+<ParamField path="top_p" type="float">
+  Nucleus sampling threshold. An alternative to sampling with temperature.
+</ParamField>
+
+<ParamField path="top_k" type="int">
+  Top-k sampling parameter. Limits the number of highest probability tokens to consider.
+</ParamField>
+
+<ParamField path="n" type="int">
+  How many chat completion choices to generate for each input message. Note that you will be charged based on the number of generated tokens across all of the choices.
+</ParamField>
+
+<ParamField path="seed" type="int">
+  Random seed for deterministic output.
+</ParamField>
+
+<ParamField path="stream" type="boolean">
+  Enable streaming response. Set to `true` to receive incremental chunks via Server-Sent Events.
+</ParamField>
+
+<ParamField path="stream_options" type="object">
+  Options for streaming response. Only set this when you set `stream: true`.
+</ParamField>
+
+### System and instructions
+
+<ParamField path="system_instruction" type="string | object">
+  System instruction/prompt. Defines the behavior and personality of the assistant.
+</ParamField>
+
+<ParamField path="prompt_mode" type="string">
+  Allows toggling between the reasoning mode and no system prompt. When set to `reasoning` the system prompt for reasoning models will be used.
+
+  - `"reasoning"`: Use reasoning mode
+</ParamField>
+
+### Response formatting
+
+<ParamField path="response_format" type="object">
+  An object specifying the format that the model must output.
+
+  - `{ "type": "json_schema", "json_schema": {...} }` enables Structured Outputs which ensures the model will match your supplied JSON schema.
+  - `{ "type": "json_object" }` enables the older JSON mode.
+  - `{ "type": "text" }` for plain text (default).
+</ParamField>
+
+### Tools and function calling
+
+<ParamField path="tools" type="array">
+  Available tools/functions for the model. Each tool should have:
+  - `type`: "function"
+  - `function`: Function definition with name, description, and parameters
+</ParamField>
+
+<ParamField path="tool_choice" type="string | object">
+  Controls which (if any) tool is called by the model.
+
+  - `"none"`: Model will not call any tool
+  - `"auto"`: Model can pick between generating a message or calling tools (default if tools are present)
+  - `"required"`: Model must call one or more tools
+  - `{"type": "function", "function": {"name": "my_function"}}`: Forces the model to call that specific tool
+</ParamField>
+
+<ParamField path="parallel_tool_calls" type="boolean">
+  Whether to enable parallel tool calls. Allows the model to call multiple tools simultaneously.
+</ParamField>
+
+<ParamField path="automatic_tool_execution" type="boolean">
+  Execute tools server-side. If false, returns raw tool calls for manual handling.
+</ParamField>
+
+<ParamField path="tool_config" type="object">
+  Tool calling configuration (Google-specific).
+</ParamField>
+
+<ParamField path="functions" type="array">
+  **Deprecated** in favor of `tools`. A list of functions the model may generate JSON inputs for.
+</ParamField>
+
+<ParamField path="function_call" type="string">
+  **Deprecated** in favor of `tool_choice`. Controls which (if any) function is called by the model.
+</ParamField>
+
+### MCP servers
+
+<ParamField path="mcp_servers" type="array | string">
+  MCP server identifiers. Accepts marketplace slugs, URLs, or MCPServerSpec objects. MCP tools are executed server-side and billed separately.
+</ParamField>
+
+<ParamField path="credentials" type="object">
+  Credentials for MCP server authentication. Each credential is matched to servers by connection name.
+</ParamField>
+
+### Advanced parameters
+
+<ParamField path="stop" type="string | array">
+  Sequences that stop generation. Up to 4 sequences where the API will stop generating further tokens.
+</ParamField>
+
+<ParamField path="presence_penalty" type="float">
+  Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics.
+</ParamField>
+
+<ParamField path="frequency_penalty" type="float">
+  Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model's likelihood to repeat the same line verbatim.
+</ParamField>
+
+<ParamField path="logit_bias" type="object">
+  Modify the likelihood of specified tokens appearing in the completion. Accepts a JSON object that maps tokens (specified by their token ID in the tokenizer) to an associated bias value from -100 to 100.
+</ParamField>
+
+<ParamField path="logprobs" type="boolean">
+  Whether to return log probabilities of the output tokens or not. If true, returns the log probabilities of each output token returned in the `content` of `message`.
+</ParamField>
+
+<ParamField path="top_logprobs" type="int">
+  An integer between 0 and 20 specifying the number of most likely tokens to return at each token position, each with an associated log probability. `logprobs` must be set to `true` if this parameter is used.
+</ParamField>
+
+<ParamField path="user" type="string">
+  **Note:** This field is being replaced by `safety_identifier` and `prompt_cache_key`.
+
+  A stable identifier for your end-users. Used to boost cache hit rates and to help detect and prevent abuse.
+</ParamField>
+
+<ParamField path="safety_identifier" type="string">
+  A stable identifier used to help detect users of your application that may be violating usage policies. We recommend hashing their username or email address.
+</ParamField>
+
+### Audio and modalities
+
+<ParamField path="modalities" type="array">
+  Output types that you would like the model to generate. Most models are capable of generating text, which is the default: `["text"]`. The `gpt-4o-audio-preview` model can also generate audio. To request both: `["text", "audio"]`.
+</ParamField>
+
+<ParamField path="audio" type="object">
+  Parameters for audio output. Required when audio output is requested with `modalities: ["audio"]`.
+
+  Fields:
+  - `voice` (required): Voice ID or custom voice
+  - `format` (required): "wav" | "aac" | "mp3" | "flac" | "opus" | "pcm16"
+</ParamField>
+
+### Caching and optimization
+
+<ParamField path="prompt_cache_key" type="string">
+  Used to cache responses for similar requests to optimize your cache hit rates. Replaces the `user` field.
+</ParamField>
+
+<ParamField path="prompt_cache_retention" type="string">
+  The retention policy for the prompt cache. Set to `24h` to enable extended prompt caching, which keeps cached prefixes active for longer.
+</ParamField>
+
+<ParamField path="cached_content" type="string">
+  Optional. The name of the cached content to use as context to serve the prediction. Format: `cachedContents/{cachedContent}` (Google-specific).
+</ParamField>
+
+### Reasoning and thinking
+
+<ParamField path="reasoning_effort" type="string">
+  Constrains effort on reasoning for reasoning models. Currently supported values are `none`, `minimal`, `low`, `medium`, `high`, and `xhigh`.
+
+  - `gpt-5.1` defaults to `none`
+  - Models before `gpt-5.1` default to `medium`
+  - `gpt-5-pro` defaults to `high`
+</ParamField>
+
+<ParamField path="thinking" type="object">
+  Extended thinking configuration (Anthropic-specific).
+</ParamField>
+
+<ParamField path="prediction" type="object">
+  Static predicted output content, such as the content of a text file that is being regenerated.
+
+  Fields:
+  - `type` (required): "content"
+  - `content` (required): string or array of text content parts
+</ParamField>
+
+### Safety and content filtering
+
+<ParamField path="safe_prompt" type="boolean">
+  Whether to inject a safety prompt before all conversations.
+</ParamField>
+
+<ParamField path="safety_settings" type="array">
+  Safety/content filtering settings (Google-specific).
+</ParamField>
+
+<ParamField path="guardrails" type="array">
+  Content filtering and safety policy configuration.
+</ParamField>
+
+### Model routing and handoffs
+
+<ParamField path="agent_attributes" type="object">
+  Agent attributes. Values in [0.0, 1.0]. Used for model routing decisions.
+</ParamField>
+
+<ParamField path="model_attributes" type="object">
+  Model attributes for routing. Maps model IDs to attribute dictionaries with values in [0.0, 1.0].
+</ParamField>
+
+<ParamField path="handoff_config" type="object">
+  Configuration for multi-model handoffs.
+</ParamField>
+
+<ParamField path="handoff_mode" type="boolean">
+  Handoff control. None or omitted: auto-detect. `true`: structured handoff (SDK). `false`: drop-in (LLM re-run for mixed turns).
+</ParamField>
+
+<ParamField path="correlation_id" type="string">
+  Stable session ID for resuming a previous handoff. Returned by the server on handoff; echo it on the next request to resume.
+</ParamField>
+
+<ParamField path="deferred_calls" type="array">
+  Tier 2 stateless resumption. Deferred tool specs from a previous handoff response, sent back verbatim so the server can resume without Redis.
+</ParamField>
+
+<ParamField path="max_turns" type="int">
+  Maximum conversation turns.
+</ParamField>
+
+### Service configuration
+
+<ParamField path="service_tier" type="string">
+  Service tier for request processing. Options: "auto" | "default" | "flex" | "scale" | "priority".
+</ParamField>
+
+<ParamField path="speed" type="string">
+  The inference speed mode for this request. `"fast"` enables high output-tokens-per-second inference.
+
+  - `"standard"`: Default speed
+  - `"fast"`: High-speed inference
+</ParamField>
+
+<ParamField path="inference_geo" type="string">
+  Specifies the geographic region for inference processing. If not specified, the workspace's `default_inference_geo` is used.
+</ParamField>
+
+<ParamField path="deferred" type="boolean">
+  If set to `true`, the request returns a `request_id`. You can then get the deferred response by GET `/v1/chat/deferred-completion/{request_id}`.
+</ParamField>
+
+### Metadata and tracking
+
+<ParamField path="metadata" type="object">
+  Set of 16 key-value pairs that can be attached to an object. This can be useful for storing additional information about the object in a structured format. Keys are strings with a maximum length of 64 characters. Values are strings with a maximum length of 512 characters.
+</ParamField>
+
+<ParamField path="store" type="boolean">
+  Whether or not to store the output of this chat completion request for use in model distillation or evals products.
+</ParamField>
+
+### Provider-specific parameters
+
+<ParamField path="generation_config" type="object">
+  Generation parameters wrapper (Google-specific).
+</ParamField>
+
+<ParamField path="output_config" type="object">
+  Output configuration (provider-specific).
+</ParamField>
+
+<ParamField path="search_parameters" type="object">
+  Set the parameters to be used for searched data. If not set, no data will be acquired by the model.
+</ParamField>
+
+<ParamField path="web_search_options" type="object">
+  This tool searches the web for relevant results to use in a response.
+</ParamField>
+
+<ParamField path="verbosity" type="string">
+  Constrains the verbosity of the model's response. Currently supported values are `low`, `medium`, and `high`.
+</ParamField>
+
+### Request options
+
+<ParamField path="extra_headers" type="object">
+  Send extra headers with the request.
+</ParamField>
+
+<ParamField path="extra_query" type="object">
+  Add additional query parameters to the request.
+</ParamField>
+
+<ParamField path="extra_body" type="object">
+  Add additional JSON properties to the request body.
+</ParamField>
+
+<ParamField path="timeout" type="float">
+  Override the client-level default timeout for this request, in seconds.
+</ParamField>
+
+<ParamField path="idempotency_key" type="string">
+  Specify a custom idempotency key for this request.
+</ParamField>
+
+## Response
+
+Returns a `ChatCompletion` object when `stream=False` (default), or a `Stream[ChatCompletionChunk]` when `stream=True`.
+
+### ChatCompletion fields
+
+<ResponseField name="id" type="string" required>
+  A unique identifier for the chat completion.
+</ResponseField>
+
+<ResponseField name="object" type="string" required>
+  The object type, which is always `chat.completion`.
+</ResponseField>
+
+<ResponseField name="created" type="int" required>
+  The Unix timestamp (in seconds) of when the chat completion was created.
+</ResponseField>
+
+<ResponseField name="model" type="string" required>
+  The model used for the chat completion.
+</ResponseField>
+
+<ResponseField name="choices" type="array" required>
+  A list of chat completion choices. Can be more than one if `n` is greater than 1.
+
+  Each choice contains:
+  - `index`: The index of this choice
+  - `message`: The chat completion message with `role` and `content`
+  - `finish_reason`: "stop" | "length" | "tool_calls" | "content_filter" | null
+  - `logprobs`: Log probability information (if requested)
+</ResponseField>
+
+<ResponseField name="usage" type="object">
+  Usage statistics for the completion request.
+
+  Fields:
+  - `prompt_tokens`: Number of tokens in the prompt
+  - `completion_tokens`: Number of tokens in the completion
+  - `total_tokens`: Total tokens used
+  - `completion_tokens_details`: Breakdown of completion tokens
+  - `prompt_tokens_details`: Breakdown of prompt tokens
+</ResponseField>
+
+<ResponseField name="system_fingerprint" type="string">
+  This fingerprint represents the backend configuration that the model runs with. Can be used in conjunction with the `seed` request parameter to understand when backend changes have been made that might impact determinism.
+</ResponseField>
+
+<ResponseField name="service_tier" type="string">
+  The processing type used for serving the request.
+</ResponseField>
+
+### Dedalus-specific response fields
+
+<ResponseField name="tools_executed" type="array">
+  List of tool names that were executed server-side (e.g., MCP tools). Only present when tools were executed on the server.
+</ResponseField>
+
+<ResponseField name="mcp_tool_results" type="array">
+  Detailed results of MCP tool executions including inputs, outputs, and timing. Provides full visibility into server-side tool execution for debugging and audit purposes.
+</ResponseField>
+
+<ResponseField name="mcp_server_errors" type="object">
+  MCP server failures keyed by server name. Each error contains:
+  - `message`: Human-readable error message
+  - `code`: Machine-readable error code
+  - `recommendation`: Suggested action for the user
+</ResponseField>
+
+<ResponseField name="pending_tools" type="array">
+  Client tools to execute, with dependency ordering. Each pending tool contains:
+  - `id`: Unique identifier for this tool call
+  - `name`: Name of the tool to execute
+  - `arguments`: Input arguments for the tool call
+  - `dependencies`: IDs of other pending calls that must complete first
+</ResponseField>
+
+<ResponseField name="server_results" type="object">
+  Completed server tool outputs keyed by call ID.
+</ResponseField>
+
+<ResponseField name="correlation_id" type="string">
+  Stable session ID for cross-turn handoff state. Echo this on the next request to resume server-side execution.
+</ResponseField>
+
+<ResponseField name="deferred" type="array">
+  Server tools blocked on client results.
+</ResponseField>
+
+<ResponseField name="turns_consumed" type="int">
+  Number of internal LLM calls made during this request. SDKs can sum this across their outer loop to track total LLM calls.
+</ResponseField>
+
+## Examples
+
+### Basic completion
+
+```python
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+completion = client.chat.completions.create(
+    model="openai/gpt-5-nano",
+    messages=[
+        {
+            "role": "system",
+            "content": "You are Stephen Dedalus. Respond in morose Joycean malaise."
+        },
+        {
+            "role": "user",
+            "content": "Hello, how are you today?"
+        }
+    ]
+)
+
+print(completion.choices[0].message.content)
+```
+
+### With temperature and max tokens
+
+```python
+completion = client.chat.completions.create(
+    model="openai/gpt-5-nano",
+    messages=[
+        {"role": "user", "content": "Write a haiku about AI"}
+    ],
+    temperature=0.7,
+    max_tokens=100
+)
+```
+
+### With function calling
+
+```python
+completion = client.chat.completions.create(
+    model="openai/gpt-5",
+    messages=[
+        {"role": "user", "content": "What's the weather in Boston?"}
+    ],
+    tools=[
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get the current weather in a location",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "location": {
+                            "type": "string",
+                            "description": "The city and state, e.g. San Francisco, CA"
+                        }
+                    },
+                    "required": ["location"]
+                }
+            }
+        }
+    ],
+    tool_choice="auto"
+)
+```
+
+### Async usage
+
+```python
+from dedalus_labs import AsyncDedalus
+
+client = AsyncDedalus()
+
+completion = await client.chat.completions.create(
+    model="openai/gpt-5-nano",
+    messages=[
+        {"role": "user", "content": "Hello!"}
+    ]
+)
+```

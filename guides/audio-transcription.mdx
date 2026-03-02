@@ -1,0 +1,375 @@
+---
+title: Audio transcription
+description: Convert audio to text using Whisper with the Dedalus Python SDK
+---
+
+Transcribe audio files into text using OpenAI's Whisper model. Supports multiple audio formats and languages.
+
+## Basic usage
+
+Transcribe an audio file to text:
+
+```python
+import os
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus(
+    api_key=os.environ.get("DEDALUS_API_KEY")
+)
+
+transcription = client.audio.transcriptions.create(
+    file=Path("/path/to/audio.mp3"),
+    model="openai/whisper-1"
+)
+
+print(transcription.text)
+```
+
+## Async usage
+
+Transcribe audio asynchronously:
+
+```python
+import os
+import asyncio
+from pathlib import Path
+from dedalus_labs import AsyncDedalus
+
+client = AsyncDedalus(
+    api_key=os.environ.get("DEDALUS_API_KEY")
+)
+
+async def main():
+    transcription = await client.audio.transcriptions.create(
+        file=Path("/path/to/audio.mp3"),
+        model="openai/whisper-1"
+    )
+    print(transcription.text)
+
+asyncio.run(main())
+```
+
+## Supported formats
+
+<Info>
+  The transcription API supports the following audio formats:
+  - mp3
+  - mp4
+  - mpeg
+  - mpga
+  - m4a
+  - wav
+  - webm
+
+  Maximum file size: **25 MB**
+</Info>
+
+## File upload methods
+
+<Tabs>
+  <Tab title="PathLike">
+    Use `Path` objects for local files:
+
+    ```python
+    from pathlib import Path
+    from dedalus_labs import Dedalus
+
+    client = Dedalus()
+
+    transcription = client.audio.transcriptions.create(
+        file=Path("/path/to/audio.mp3"),
+        model="openai/whisper-1"
+    )
+    ```
+  </Tab>
+  <Tab title="Bytes">
+    Upload raw bytes directly:
+
+    ```python
+    from dedalus_labs import Dedalus
+
+    client = Dedalus()
+
+    with open("/path/to/audio.mp3", "rb") as f:
+        audio_bytes = f.read()
+
+    transcription = client.audio.transcriptions.create(
+        file=audio_bytes,
+        model="openai/whisper-1"
+    )
+    ```
+  </Tab>
+  <Tab title="Tuple">
+    Specify filename and media type:
+
+    ```python
+    from dedalus_labs import Dedalus
+
+    client = Dedalus()
+
+    with open("/path/to/audio.mp3", "rb") as f:
+        audio_bytes = f.read()
+
+    transcription = client.audio.transcriptions.create(
+        file=("recording.mp3", audio_bytes, "audio/mpeg"),
+        model="openai/whisper-1"
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Language specification
+
+Improve accuracy by specifying the input language using ISO-639-1 codes:
+
+```python
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+# Transcribe Spanish audio
+transcription = client.audio.transcriptions.create(
+    file=Path("/path/to/spanish_audio.mp3"),
+    model="openai/whisper-1",
+    language="es"  # ISO-639-1 code for Spanish
+)
+
+print(transcription.text)
+```
+
+<Accordion title="Common language codes">
+  - `en` - English
+  - `es` - Spanish
+  - `fr` - French
+  - `de` - German
+  - `it` - Italian
+  - `pt` - Portuguese
+  - `nl` - Dutch
+  - `ja` - Japanese
+  - `ko` - Korean
+  - `zh` - Chinese
+  - `ru` - Russian
+  - `ar` - Arabic
+  - `hi` - Hindi
+</Accordion>
+
+## Response formats
+
+Choose from multiple output formats:
+
+<Tabs>
+  <Tab title="JSON (default)">
+    ```python
+    transcription = client.audio.transcriptions.create(
+        file=Path("/path/to/audio.mp3"),
+        model="openai/whisper-1",
+        response_format="json"  # Default
+    )
+
+    print(transcription.text)
+    ```
+  </Tab>
+  <Tab title="Text">
+    ```python
+    transcription = client.audio.transcriptions.create(
+        file=Path("/path/to/audio.mp3"),
+        model="openai/whisper-1",
+        response_format="text"
+    )
+
+    # Returns plain text string
+    print(transcription)
+    ```
+  </Tab>
+  <Tab title="SRT (subtitles)">
+    ```python
+    transcription = client.audio.transcriptions.create(
+        file=Path("/path/to/audio.mp3"),
+        model="openai/whisper-1",
+        response_format="srt"
+    )
+
+    # Returns SRT format with timestamps
+    print(transcription)
+    # Output:
+    # 1
+    # 00:00:00,000 --> 00:00:02,000
+    # Hello, world!
+    ```
+  </Tab>
+  <Tab title="VTT (WebVTT)">
+    ```python
+    transcription = client.audio.transcriptions.create(
+        file=Path("/path/to/audio.mp3"),
+        model="openai/whisper-1",
+        response_format="vtt"
+    )
+
+    # Returns WebVTT format
+    print(transcription)
+    # Output:
+    # WEBVTT
+    #
+    # 00:00:00.000 --> 00:00:02.000
+    # Hello, world!
+    ```
+  </Tab>
+  <Tab title="Verbose JSON">
+    ```python
+    transcription = client.audio.transcriptions.create(
+        file=Path("/path/to/audio.mp3"),
+        model="openai/whisper-1",
+        response_format="verbose_json"
+    )
+
+    # Includes detailed timing and metadata
+    print(transcription.text)
+    print(transcription.language)
+    print(transcription.duration)
+    for segment in transcription.segments:
+        print(f"[{segment.start}s - {segment.end}s]: {segment.text}")
+    ```
+  </Tab>
+</Tabs>
+
+## Prompting for context
+
+Provide context to guide the transcription style and content:
+
+```python
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+# Guide the model with context about the audio
+transcription = client.audio.transcriptions.create(
+    file=Path("/path/to/audio.mp3"),
+    model="openai/whisper-1",
+    prompt="This is a technical interview about machine learning and neural networks."
+)
+
+print(transcription.text)
+```
+
+<Info>
+  The `prompt` parameter helps the model:
+  - Maintain consistent spelling of uncommon words
+  - Match a specific writing style
+  - Continue from previous audio segments
+  - Use domain-specific terminology correctly
+</Info>
+
+## Temperature control
+
+Adjust the sampling temperature for different transcription behaviors:
+
+```python
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+# Lower temperature for more consistent transcriptions
+transcription = client.audio.transcriptions.create(
+    file=Path("/path/to/audio.mp3"),
+    model="openai/whisper-1",
+    temperature=0.0  # Range: 0.0 to 1.0
+)
+
+print(transcription.text)
+```
+
+<Note>
+  - `temperature=0.0` - More deterministic and consistent
+  - `temperature=0.5` - Balanced (default)
+  - `temperature=1.0` - More varied transcriptions
+</Note>
+
+## Complete example
+
+Transcribe with all options:
+
+```python
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+transcription = client.audio.transcriptions.create(
+    file=Path("/path/to/interview.mp3"),
+    model="openai/whisper-1",
+    language="en",
+    prompt="This is an interview with Dr. Smith about quantum computing.",
+    response_format="verbose_json",
+    temperature=0.2
+)
+
+print(f"Language: {transcription.language}")
+print(f"Duration: {transcription.duration}s")
+print(f"\nFull text:\n{transcription.text}")
+
+print("\nSegments:")
+for i, segment in enumerate(transcription.segments, 1):
+    print(f"{i}. [{segment.start:.2f}s - {segment.end:.2f}s]: {segment.text}")
+```
+
+## Error handling
+
+```python
+import dedalus_labs
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+try:
+    transcription = client.audio.transcriptions.create(
+        file=Path("/path/to/audio.mp3"),
+        model="openai/whisper-1"
+    )
+    print(transcription.text)
+except FileNotFoundError:
+    print("Audio file not found")
+except dedalus_labs.BadRequestError as e:
+    print(f"Invalid request: {e.message}")
+    # Common causes: file too large, unsupported format
+except dedalus_labs.APIConnectionError as e:
+    print("Network error occurred")
+    print(e.__cause__)
+except dedalus_labs.APIStatusError as e:
+    print(f"API error: {e.status_code}")
+```
+
+## Processing multiple files
+
+```python
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+audio_dir = Path("/path/to/audio_files")
+audio_files = list(audio_dir.glob("*.mp3"))
+
+for audio_file in audio_files:
+    transcription = client.audio.transcriptions.create(
+        file=audio_file,
+        model="openai/whisper-1",
+        language="en"
+    )
+    
+    # Save transcription to text file
+    output_file = audio_file.with_suffix(".txt")
+    output_file.write_text(transcription.text)
+    print(f"Transcribed: {audio_file.name}")
+```
+
+<Warning>
+  Ensure your audio files are under 25 MB. For larger files, consider:
+  - Compressing the audio
+  - Splitting into smaller segments
+  - Using a lower bitrate format
+</Warning>

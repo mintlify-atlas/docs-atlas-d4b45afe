@@ -1,0 +1,191 @@
+---
+title: "Create Translation"
+description: "Translate audio files in any supported language to English text"
+---
+
+## Method Signature
+
+```python
+client.audio.translations.create(
+    file: FileTypes,
+    model: str,
+    prompt: Optional[str] = None,
+    response_format: Optional[str] = None,
+    temperature: Optional[float] = None
+) -> TranslationCreateResponse
+```
+
+## Parameters
+
+<ParamField path="file" type="FileTypes" required>
+  The audio file to translate. Supported formats include:
+  - mp3
+  - mp4
+  - mpeg
+  - mpga
+  - m4a
+  - wav
+  - webm
+  
+  Maximum file size is 25 MB.
+</ParamField>
+
+<ParamField path="model" type="str" required>
+  Model ID to use for translation (e.g., `"openai/whisper-1"`).
+</ParamField>
+
+<ParamField path="prompt" type="str">
+  An optional text to guide the model's style. The prompt should be in English.
+</ParamField>
+
+<ParamField path="response_format" type="str">
+  The format of the transcript output. Supported formats:
+  - `json` (default) - Simple JSON with text
+  - `text` - Plain text
+  - `srt` - SubRip subtitle format
+  - `verbose_json` - JSON with detailed metadata
+  - `vtt` - Web Video Text Tracks format
+</ParamField>
+
+<ParamField path="temperature" type="float">
+  The sampling temperature, between 0 and 1. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic.
+</ParamField>
+
+## Response
+
+The response varies based on the `response_format` parameter:
+
+### JSON Format (default)
+
+<ResponseField name="text" type="str">
+  The translated text in English.
+</ResponseField>
+
+### Verbose JSON Format
+
+<ResponseField name="text" type="str">
+  The translated text in English.
+</ResponseField>
+
+<ResponseField name="language" type="str">
+  The language of the output translation (always `english`).
+</ResponseField>
+
+<ResponseField name="duration" type="float">
+  The duration of the input audio.
+</ResponseField>
+
+<ResponseField name="segments" type="List[Segment]">
+  Segments of the translated text and their corresponding details.
+  
+  <Expandable title="Segment properties">
+    <ResponseField name="id" type="int">
+      Unique identifier of the segment.
+    </ResponseField>
+    
+    <ResponseField name="text" type="str">
+      Text content of the segment.
+    </ResponseField>
+    
+    <ResponseField name="start" type="float">
+      Start time of the segment in seconds.
+    </ResponseField>
+    
+    <ResponseField name="end" type="float">
+      End time of the segment in seconds.
+    </ResponseField>
+    
+    <ResponseField name="tokens" type="List[int]">
+      Array of token IDs for the text content.
+    </ResponseField>
+    
+    <ResponseField name="temperature" type="float">
+      Temperature parameter used for generating the segment.
+    </ResponseField>
+    
+    <ResponseField name="avg_logprob" type="float">
+      Average logprob of the segment. If the value is lower than -1, consider the logprobs failed.
+    </ResponseField>
+    
+    <ResponseField name="compression_ratio" type="float">
+      Compression ratio of the segment. If the value is greater than 2.4, consider the compression failed.
+    </ResponseField>
+    
+    <ResponseField name="no_speech_prob" type="float">
+      Probability of no speech in the segment. If the value is higher than 1.0 and the avg_logprob is below -1, consider this segment silent.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Examples
+
+```python
+from dedalus_labs import DedalusLabs
+
+client = DedalusLabs()
+
+# Basic translation from any language to English
+with open("french_audio.mp3", "rb") as audio_file:
+    translation = client.audio.translations.create(
+        file=audio_file,
+        model="openai/whisper-1"
+    )
+
+print(translation.text)
+```
+
+```python
+# Get detailed translation with timestamps
+with open("spanish_interview.wav", "rb") as audio_file:
+    translation = client.audio.translations.create(
+        file=audio_file,
+        model="openai/whisper-1",
+        response_format="verbose_json"
+    )
+
+print(f"Original language: {translation.language}")
+print(f"Duration: {translation.duration}s")
+print(f"English translation: {translation.text}")
+
+for segment in translation.segments:
+    print(f"{segment.start:.2f}s - {segment.end:.2f}s: {segment.text}")
+```
+
+```python
+# Generate English SRT subtitles from foreign language audio
+with open("german_video.m4a", "rb") as audio_file:
+    srt_output = client.audio.translations.create(
+        file=audio_file,
+        model="openai/whisper-1",
+        response_format="srt"
+    )
+
+with open("english_subtitles.srt", "w") as f:
+    f.write(srt_output.text)
+```
+
+```python
+# Use prompt to guide translation style
+with open("japanese_presentation.wav", "rb") as audio_file:
+    translation = client.audio.translations.create(
+        file=audio_file,
+        model="openai/whisper-1",
+        prompt="This is a technical presentation about AI and machine learning.",
+        temperature=0.2
+    )
+
+print(translation.text)
+```
+
+```python
+# Get plain text translation
+with open("mandarin_lecture.mp3", "rb") as audio_file:
+    translation = client.audio.translations.create(
+        file=audio_file,
+        model="openai/whisper-1",
+        response_format="text"
+    )
+
+with open("lecture_translation.txt", "w") as f:
+    f.write(translation.text)
+```

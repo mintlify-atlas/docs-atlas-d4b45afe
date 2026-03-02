@@ -1,0 +1,89 @@
+---
+title: "Create Image Variations"
+description: "Create variations of an existing image using DALL-E 2"
+---
+
+## Overview
+
+Create variations of an image. DALL-E 2 only. Upload an image to generate variations.
+
+## Method Signature
+
+```python
+client.images.create_variation(
+    image: FileTypes,
+    model: Optional[str] = None,
+    n: Optional[int] = None,
+    response_format: Optional[str] = None,
+    size: Optional[str] = None,
+    user: Optional[str] = None,
+) -> ImagesResponse
+```
+
+## Parameters
+
+<ParamField path="image" type="file" required>
+  The image to create variations of. Must be a valid PNG file, less than 4MB, and square.
+</ParamField>
+
+<ParamField path="model" type="string">
+  The model to use. Currently only `openai/dall-e-2` is supported for variations.
+</ParamField>
+
+<ParamField path="n" type="integer">
+  Number of variations to generate (1-10).
+</ParamField>
+
+<ParamField path="response_format" type="string">
+  Format for returned images: `url` or `b64_json`. URLs are valid for 60 minutes.
+</ParamField>
+
+<ParamField path="size" type="string">
+  Size of the generated images. Must be one of `256x256`, `512x512`, or `1024x1024`.
+</ParamField>
+
+<ParamField path="user" type="string">
+  Unique identifier for your end-user, for monitoring and abuse detection.
+</ParamField>
+
+## Response
+
+<ResponseField name="created" type="integer">
+  Unix timestamp when the images were created.
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  List of image variations.
+  
+  <Expandable title="Image Object">
+    <ResponseField name="url" type="string">
+      URL of the generated image (if `response_format=url`).
+    </ResponseField>
+    
+    <ResponseField name="b64_json" type="string">
+      Base64-encoded image data (if `response_format=b64_json`).
+    </ResponseField>
+    
+    <ResponseField name="revised_prompt" type="string">
+      Revised prompt used for generation.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example
+
+```python
+import dedalus_labs
+
+client = dedalus_labs.Client(api_key="your-api-key")
+
+with open("original.png", "rb") as image_file:
+    response = client.images.create_variation(
+        image=image_file,
+        n=3,
+        size="1024x1024"
+    )
+
+for i, image in enumerate(response.data):
+    print(f"Variation {i+1}: {image.url}")
+```

@@ -1,0 +1,357 @@
+---
+title: OCR
+description: Extract text from PDFs and images using OCR with the Dedalus Python SDK
+---
+
+Process documents through Mistral OCR to extract text from PDFs and images, returning markdown-formatted content.
+
+## Basic usage
+
+Extract text from a document using a base64-encoded data URI:
+
+```python
+import os
+import base64
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus(
+    api_key=os.environ.get("DEDALUS_API_KEY")
+)
+
+# Read and encode the document
+document_path = Path("/path/to/document.pdf")
+with document_path.open("rb") as f:
+    document_bytes = f.read()
+
+# Create data URI
+media_type = "application/pdf"  # or "image/png", "image/jpeg", etc.
+document_b64 = base64.b64encode(document_bytes).decode('utf-8')
+document_uri = f"data:{media_type};base64,{document_b64}"
+
+# Process the document
+response = client.ocr.process(
+    document={"document_url": document_uri}
+)
+
+print(response.text)
+```
+
+## Async usage
+
+Process documents asynchronously:
+
+```python
+import os
+import base64
+import asyncio
+from pathlib import Path
+from dedalus_labs import AsyncDedalus
+
+client = AsyncDedalus(
+    api_key=os.environ.get("DEDALUS_API_KEY")
+)
+
+async def main():
+    # Prepare document
+    with Path("/path/to/document.pdf").open("rb") as f:
+        document_bytes = f.read()
+    
+    document_uri = f"data:application/pdf;base64,{base64.b64encode(document_bytes).decode()}"
+    
+    # Process document
+    response = await client.ocr.process(
+        document={"document_url": document_uri}
+    )
+    
+    print(response.text)
+
+asyncio.run(main())
+```
+
+## Supported formats
+
+<Info>
+  The OCR API supports:
+  - **PDFs** - Multi-page documents
+  - **Images** - PNG, JPEG, WEBP, GIF, BMP
+  
+  Documents are provided as base64-encoded data URIs.
+</Info>
+
+## Helper function
+
+Create a reusable helper to encode documents:
+
+```python
+import base64
+from pathlib import Path
+from typing import Dict
+
+def encode_document(file_path: Path) -> Dict[str, str]:
+    """Encode a document file to a data URI for OCR processing."""
+    # Determine media type from extension
+    media_types = {
+        ".pdf": "application/pdf",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".webp": "image/webp",
+        ".gif": "image/gif",
+        ".bmp": "image/bmp",
+    }
+    
+    suffix = file_path.suffix.lower()
+    media_type = media_types.get(suffix, "application/octet-stream")
+    
+    # Read and encode
+    with file_path.open("rb") as f:
+        document_bytes = f.read()
+    
+    document_b64 = base64.b64encode(document_bytes).decode('utf-8')
+    document_uri = f"data:{media_type};base64,{document_b64}"
+    
+    return {"document_url": document_uri}
+
+# Usage
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+response = client.ocr.process(
+    document=encode_document(Path("/path/to/file.pdf"))
+)
+print(response.text)
+```
+
+## Response structure
+
+The OCR response includes extracted text and page-level information:
+
+```python
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+response = client.ocr.process(
+    document=encode_document(Path("/path/to/document.pdf"))
+)
+
+# Access full text
+print("Full text:")
+print(response.text)
+
+# Access page-by-page
+if response.pages:
+    for i, page in enumerate(response.pages, 1):
+        print(f"\nPage {i}:")
+        print(page.text)
+```
+
+## Specify model
+
+Optionally specify which OCR model to use:
+
+```python
+response = client.ocr.process(
+    document=encode_document(Path("/path/to/document.pdf")),
+    model="mistral/pixtral-ocr"  # Specify model explicitly
+)
+
+print(response.text)
+```
+
+## Multi-page PDFs
+
+Process multi-page PDFs and access individual pages:
+
+```python
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+response = client.ocr.process(
+    document=encode_document(Path("/path/to/multipage.pdf"))
+)
+
+print(f"Total pages: {len(response.pages) if response.pages else 0}")
+print(f"\nFull document text length: {len(response.text)} characters")
+
+# Process each page
+if response.pages:
+    for page_num, page in enumerate(response.pages, 1):
+        print(f"\n--- Page {page_num} ---")
+        print(f"Characters: {len(page.text)}")
+        print(f"Preview: {page.text[:100]}...")
+```
+
+## Markdown output
+
+The OCR API returns markdown-formatted text, preserving document structure:
+
+```python
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+response = client.ocr.process(
+    document=encode_document(Path("/path/to/formatted_document.pdf"))
+)
+
+# Save as markdown file
+output_path = Path("extracted_text.md")
+output_path.write_text(response.text)
+print(f"Markdown saved to {output_path}")
+```
+
+<Note>
+  The OCR output preserves formatting elements like:
+  - **Headings** - Converted to markdown headings
+  - **Lists** - Bullet points and numbered lists
+  - **Tables** - Markdown table format
+  - **Emphasis** - Bold and italic text
+</Note>
+
+## Batch processing
+
+Process multiple documents:
+
+```python
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+documents_dir = Path("/path/to/documents")
+output_dir = Path("/path/to/output")
+output_dir.mkdir(exist_ok=True)
+
+for doc_path in documents_dir.glob("*.pdf"):
+    print(f"Processing {doc_path.name}...")
+    
+    response = client.ocr.process(
+        document=encode_document(doc_path)
+    )
+    
+    # Save extracted text
+    output_path = output_dir / f"{doc_path.stem}.md"
+    output_path.write_text(response.text)
+    
+    print(f"  Saved to {output_path.name}")
+    print(f"  Extracted {len(response.text)} characters")
+```
+
+## Image OCR
+
+Extract text from images:
+
+```python
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+# Process an image file
+response = client.ocr.process(
+    document=encode_document(Path("/path/to/screenshot.png"))
+)
+
+print("Extracted text from image:")
+print(response.text)
+```
+
+## Error handling
+
+```python
+import dedalus_labs
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+try:
+    response = client.ocr.process(
+        document=encode_document(Path("/path/to/document.pdf"))
+    )
+    print(response.text)
+    
+except FileNotFoundError:
+    print("Document file not found")
+except dedalus_labs.BadRequestError as e:
+    print(f"Invalid request: {e.message}")
+    # Common causes: unsupported format, corrupt file, file too large
+except dedalus_labs.APIConnectionError as e:
+    print("Network error occurred")
+    print(e.__cause__)
+except dedalus_labs.APIStatusError as e:
+    print(f"API error: {e.status_code}")
+```
+
+## Complete example
+
+Full workflow with error handling and output:
+
+```python
+import base64
+from pathlib import Path
+from typing import Dict, Optional
+from dedalus_labs import Dedalus
+import dedalus_labs
+
+def encode_document(file_path: Path) -> Dict[str, str]:
+    """Encode document to data URI."""
+    media_types = {
+        ".pdf": "application/pdf",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+    }
+    
+    suffix = file_path.suffix.lower()
+    media_type = media_types.get(suffix, "application/octet-stream")
+    
+    with file_path.open("rb") as f:
+        document_bytes = f.read()
+    
+    document_b64 = base64.b64encode(document_bytes).decode('utf-8')
+    return {"document_url": f"data:{media_type};base64,{document_b64}"}
+
+def extract_text(client: Dedalus, file_path: Path) -> Optional[str]:
+    """Extract text from a document file."""
+    try:
+        response = client.ocr.process(
+            document=encode_document(file_path)
+        )
+        return response.text
+    except dedalus_labs.APIError as e:
+        print(f"Error processing {file_path.name}: {e}")
+        return None
+
+# Main execution
+client = Dedalus()
+
+document_path = Path("/path/to/document.pdf")
+text = extract_text(client, document_path)
+
+if text:
+    print(f"Successfully extracted {len(text)} characters")
+    
+    # Save to file
+    output_path = document_path.with_suffix(".md")
+    output_path.write_text(text)
+    print(f"Saved to {output_path}")
+    
+    # Print preview
+    print("\nPreview:")
+    print(text[:500])
+else:
+    print("Failed to extract text")
+```
+
+<Warning>
+  Large documents may take longer to process. Consider:
+  - Breaking very large PDFs into smaller chunks
+  - Using async processing for multiple documents
+  - Implementing retry logic for transient failures
+</Warning>

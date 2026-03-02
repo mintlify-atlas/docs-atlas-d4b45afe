@@ -1,0 +1,323 @@
+---
+title: Embeddings
+description: Generate vector embeddings for text using the Dedalus Python SDK
+---
+
+Embeddings convert text into numerical vectors that capture semantic meaning. Use them for search, recommendations, clustering, and similarity comparisons.
+
+## Basic usage
+
+Generate embeddings for a single text string:
+
+```python
+import os
+from dedalus_labs import Dedalus
+
+client = Dedalus(
+    api_key=os.environ.get("DEDALUS_API_KEY")
+)
+
+response = client.embeddings.create(
+    model="text-embedding-3-small",
+    input="The quick brown fox jumps over the lazy dog"
+)
+
+# Access the embedding vector
+embedding = response.data[0].embedding
+print(f"Embedding dimension: {len(embedding)}")
+print(f"First few values: {embedding[:5]}")
+```
+
+## Async usage
+
+Generate embeddings asynchronously:
+
+```python
+import os
+import asyncio
+from dedalus_labs import AsyncDedalus
+
+client = AsyncDedalus(
+    api_key=os.environ.get("DEDALUS_API_KEY")
+)
+
+async def main():
+    response = await client.embeddings.create(
+        model="text-embedding-3-small",
+        input="The quick brown fox jumps over the lazy dog"
+    )
+    
+    embedding = response.data[0].embedding
+    print(f"Generated {len(embedding)}-dimensional embedding")
+
+asyncio.run(main())
+```
+
+## Batch processing
+
+Generate embeddings for multiple texts in a single request:
+
+```python
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+texts = [
+    "The quick brown fox jumps over the lazy dog",
+    "Machine learning is a subset of artificial intelligence",
+    "Python is a popular programming language",
+]
+
+response = client.embeddings.create(
+    model="text-embedding-3-small",
+    input=texts
+)
+
+# Access embeddings in order
+for i, data in enumerate(response.data):
+    print(f"Text {i}: dimension {len(data.embedding)}")
+    print(f"  First few values: {data.embedding[:3]}")
+
+print(f"\nTotal tokens used: {response.usage.total_tokens}")
+```
+
+## Available models
+
+<Tabs>
+  <Tab title="text-embedding-3-small">
+    Best for most use cases with a balance of performance and cost.
+
+    ```python
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input="Your text here"
+    )
+    # Default: 1536 dimensions
+    ```
+  </Tab>
+  <Tab title="text-embedding-3-large">
+    Higher quality embeddings for tasks requiring maximum accuracy.
+
+    ```python
+    response = client.embeddings.create(
+        model="text-embedding-3-large",
+        input="Your text here"
+    )
+    # Default: 3072 dimensions
+    ```
+  </Tab>
+  <Tab title="text-embedding-ada-002">
+    Legacy model, still supported for backwards compatibility.
+
+    ```python
+    response = client.embeddings.create(
+        model="text-embedding-ada-002",
+        input="Your text here"
+    )
+    # Fixed: 1536 dimensions
+    ```
+  </Tab>
+</Tabs>
+
+## Custom dimensions
+
+Reduce dimensionality for storage efficiency (text-embedding-3 models only):
+
+```python
+response = client.embeddings.create(
+    model="text-embedding-3-small",
+    input="Your text here",
+    dimensions=512  # Reduce from default 1536 to 512
+)
+
+embedding = response.data[0].embedding
+print(f"Reduced to {len(embedding)} dimensions")
+```
+
+<Info>
+  Reducing dimensions can save storage space and improve search performance with minimal quality loss. The model is trained to produce meaningful representations at various dimensionalities.
+</Info>
+
+## Encoding formats
+
+Choose between float and base64 encoding:
+
+<Tabs>
+  <Tab title="Float (default)">
+    ```python
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input="Your text here",
+        encoding_format="float"  # Default
+    )
+    
+    # Returns list of floats
+    embedding = response.data[0].embedding
+    print(type(embedding))  # <class 'list'>
+    print(type(embedding[0]))  # <class 'float'>
+    ```
+  </Tab>
+  <Tab title="Base64">
+    ```python
+    import base64
+    import struct
+
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input="Your text here",
+        encoding_format="base64"
+    )
+    
+    # Decode base64 to floats
+    b64_string = response.data[0].embedding
+    bytes_data = base64.b64decode(b64_string)
+    float_array = struct.unpack(f'{len(bytes_data)//4}f', bytes_data)
+    print(f"Decoded {len(float_array)} floats")
+    ```
+  </Tab>
+</Tabs>
+
+## Common use cases
+
+### Semantic search
+
+```python
+import numpy as np
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+# Embed documents
+documents = [
+    "Python is a programming language",
+    "JavaScript runs in browsers",
+    "Machine learning uses neural networks",
+    "Databases store structured data",
+]
+
+response = client.embeddings.create(
+    model="text-embedding-3-small",
+    input=documents
+)
+
+doc_embeddings = [data.embedding for data in response.data]
+
+# Embed search query
+query = "Tell me about programming"
+query_response = client.embeddings.create(
+    model="text-embedding-3-small",
+    input=query
+)
+query_embedding = query_response.data[0].embedding
+
+# Calculate cosine similarity
+def cosine_similarity(a, b):
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+# Find most similar document
+similarities = [
+    cosine_similarity(query_embedding, doc_emb) 
+    for doc_emb in doc_embeddings
+]
+
+most_similar_idx = np.argmax(similarities)
+print(f"Most similar document: {documents[most_similar_idx]}")
+print(f"Similarity score: {similarities[most_similar_idx]:.4f}")
+```
+
+### Clustering
+
+```python
+from sklearn.cluster import KMeans
+import numpy as np
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+texts = [
+    "apple fruit red delicious",
+    "banana fruit yellow tropical",
+    "car vehicle transportation auto",
+    "truck vehicle transportation heavy",
+    "orange fruit citrus vitamin",
+]
+
+response = client.embeddings.create(
+    model="text-embedding-3-small",
+    input=texts
+)
+
+embeddings = np.array([data.embedding for data in response.data])
+
+# Cluster into 2 groups
+kmeans = KMeans(n_clusters=2, random_state=42)
+cluster_labels = kmeans.fit_predict(embeddings)
+
+for text, label in zip(texts, cluster_labels):
+    print(f"Cluster {label}: {text}")
+```
+
+## Token limits and batching
+
+<Warning>
+  The embeddings API has the following limits:
+  - Maximum 8,192 tokens per input string
+  - Maximum 300,000 tokens total per request
+  - Empty strings are not allowed
+  - Maximum 2,048 dimensions for arrays
+</Warning>
+
+Process large batches efficiently:
+
+```python
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+def batch_embed(texts, batch_size=100):
+    """Embed texts in batches to avoid rate limits."""
+    all_embeddings = []
+    
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i + batch_size]
+        response = client.embeddings.create(
+            model="text-embedding-3-small",
+            input=batch
+        )
+        all_embeddings.extend([data.embedding for data in response.data])
+    
+    return all_embeddings
+
+# Process 500 texts in batches of 100
+large_text_list = [f"Document {i} content..." for i in range(500)]
+embeddings = batch_embed(large_text_list)
+print(f"Generated {len(embeddings)} embeddings")
+```
+
+## Error handling
+
+```python
+import dedalus_labs
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+try:
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input="Your text here"
+    )
+except dedalus_labs.APIConnectionError as e:
+    print("Network error occurred")
+    print(e.__cause__)
+except dedalus_labs.RateLimitError as e:
+    print("Rate limit exceeded, retry with backoff")
+except dedalus_labs.BadRequestError as e:
+    print(f"Invalid request: {e.response}")
+except dedalus_labs.APIStatusError as e:
+    print(f"API error: {e.status_code}")
+```
+
+<Note>
+  Embeddings are deterministic - the same input will always produce the same output vector for a given model and dimension setting.
+</Note>

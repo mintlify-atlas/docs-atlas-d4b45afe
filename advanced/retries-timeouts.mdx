@@ -1,0 +1,140 @@
+---
+title: Retries and timeouts
+description: Configure automatic retry behavior and request timeout settings
+---
+
+## Retries
+
+Certain errors are automatically retried 2 times by default, with a short exponential backoff. The following errors are retried automatically:
+
+- Connection errors (network connectivity problems)
+- 408 Request Timeout
+- 409 Conflict
+- 429 Rate Limit
+- 500+ Internal Server errors
+
+### Configuring retries globally
+
+You can configure retry settings when creating the client:
+
+```python
+from dedalus_labs import Dedalus
+
+# Disable retries
+client = Dedalus(
+    max_retries=0,
+)
+
+# Increase retries
+client = Dedalus(
+    max_retries=5,
+)
+```
+
+The default is `max_retries=2`.
+
+### Configuring retries per-request
+
+You can also configure retries on a per-request basis using `with_options()`:
+
+```python
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+# This request will retry up to 5 times
+client.with_options(max_retries=5).chat.completions.create(
+    model="openai/gpt-5-nano",
+    messages=[
+        {
+            "role": "system",
+            "content": "You are Stephen Dedalus. Respond in morose Joycean malaise.",
+        },
+        {
+            "role": "user",
+            "content": "Hello, how are you today?",
+        },
+    ],
+)
+```
+
+## Timeouts
+
+By default, requests time out after 1 minute (60 seconds). You can configure this with the `timeout` option.
+
+### Basic timeout configuration
+
+Set a simple timeout in seconds:
+
+```python
+from dedalus_labs import Dedalus
+
+# Configure the default for all requests (20 seconds)
+client = Dedalus(
+    timeout=20.0,
+)
+```
+
+### Granular timeout control
+
+For more granular control, use `httpx.Timeout` to configure different timeout values for different phases of the request:
+
+```python
+import httpx
+from dedalus_labs import Dedalus
+
+client = Dedalus(
+    timeout=httpx.Timeout(
+        60.0,      # Total timeout
+        read=5.0,   # Time to read response
+        write=10.0, # Time to send request
+        connect=2.0 # Time to establish connection
+    ),
+)
+```
+
+### Per-request timeouts
+
+Override the timeout for specific requests:
+
+```python
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+# This request will timeout after 5 seconds
+client.with_options(timeout=5.0).chat.completions.create(
+    model="openai/gpt-5-nano",
+    messages=[
+        {
+            "role": "system",
+            "content": "You are Stephen Dedalus. Respond in morose Joycean malaise.",
+        },
+        {
+            "role": "user",
+            "content": "Hello, how are you today?",
+        },
+    ],
+)
+```
+
+### Handling timeout errors
+
+When a request times out, an `APITimeoutError` is thrown:
+
+```python
+import dedalus_labs
+from dedalus_labs import Dedalus
+
+client = Dedalus(timeout=5.0)
+
+try:
+    response = client.chat.completions.create(
+        model="openai/gpt-5-nano",
+        messages=[{"role": "user", "content": "Hello"}],
+    )
+except dedalus_labs.APITimeoutError as e:
+    print(f"Request timed out: {e}")
+```
+
+Note that requests that time out are retried twice by default unless you configure `max_retries=0`.

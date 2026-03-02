@@ -1,0 +1,162 @@
+---
+title: "Retrieve Model"
+description: "Retrieve detailed information about a specific model"
+---
+
+## Overview
+
+Retrieve detailed information about a specific model, including its capabilities, provider, and supported features.
+
+## Method Signature
+
+```python
+client.models.retrieve(model_id: str) -> Model
+```
+
+## Parameters
+
+<ParamField path="model_id" type="string" required>
+  The ID of the model to retrieve (e.g., `openai/gpt-4`, `anthropic/claude-3-5-sonnet-20241022`).
+</ParamField>
+
+## Response
+
+<ResponseField name="id" type="string">
+  Unique model identifier with provider prefix (e.g., `openai/gpt-4`).
+</ResponseField>
+
+<ResponseField name="provider" type="string">
+  Provider that hosts this model. One of: `openai`, `anthropic`, `google`, `xai`, `mistral`, `groq`, `fireworks`, `deepseek`, `moonshot`, `cerebras`.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  When the model was released (RFC 3339 format).
+</ResponseField>
+
+<ResponseField name="display_name" type="string">
+  Human-readable model name.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Model description.
+</ResponseField>
+
+<ResponseField name="version" type="string">
+  Model version identifier.
+</ResponseField>
+
+<ResponseField name="capabilities" type="object">
+  Normalized model capabilities across all providers.
+  
+  <Expandable title="Capabilities">
+    <ResponseField name="text" type="boolean">
+      Supports text generation.
+    </ResponseField>
+    
+    <ResponseField name="vision" type="boolean">
+      Supports image understanding.
+    </ResponseField>
+    
+    <ResponseField name="audio" type="boolean">
+      Supports audio processing.
+    </ResponseField>
+    
+    <ResponseField name="image_generation" type="boolean">
+      Supports image generation.
+    </ResponseField>
+    
+    <ResponseField name="tools" type="boolean">
+      Supports function/tool calling.
+    </ResponseField>
+    
+    <ResponseField name="thinking" type="boolean">
+      Supports extended thinking/reasoning.
+    </ResponseField>
+    
+    <ResponseField name="streaming" type="boolean">
+      Supports streaming responses.
+    </ResponseField>
+    
+    <ResponseField name="structured_output" type="boolean">
+      Supports structured JSON output.
+    </ResponseField>
+    
+    <ResponseField name="input_token_limit" type="integer">
+      Maximum input tokens.
+    </ResponseField>
+    
+    <ResponseField name="output_token_limit" type="integer">
+      Maximum output tokens.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="defaults" type="object">
+  Provider-declared default parameters for model generation.
+  
+  <Expandable title="Defaults">
+    <ResponseField name="temperature" type="number">
+      Default temperature setting.
+    </ResponseField>
+    
+    <ResponseField name="max_output_tokens" type="integer">
+      Default maximum output tokens.
+    </ResponseField>
+    
+    <ResponseField name="top_p" type="number">
+      Default top_p setting.
+    </ResponseField>
+    
+    <ResponseField name="top_k" type="integer">
+      Default top_k setting.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="provider_info" type="object">
+  Raw provider-specific metadata.
+</ResponseField>
+
+## Errors
+
+- **401**: Authentication fails
+- **404**: Model not found or not accessible with current API key
+- **500**: Internal error occurs
+
+## Example
+
+```python
+import dedalus_labs
+
+client = dedalus_labs.Client(api_key="your-api-key")
+
+model = client.models.retrieve("openai/gpt-4")
+
+print(f"Model: {model.id}")
+print(f"Provider: {model.provider}")
+print(f"Display Name: {model.display_name}")
+
+if model.capabilities:
+    print(f"Supports vision: {model.capabilities.vision}")
+    print(f"Max input tokens: {model.capabilities.input_token_limit}")
+```
+
+### Response Example
+
+```json
+{
+  "id": "openai/gpt-4",
+  "object": "model",
+  "created_at": "2023-06-27T16:40:11Z",
+  "provider": "openai",
+  "display_name": "GPT-4",
+  "capabilities": {
+    "text": true,
+    "vision": false,
+    "tools": true,
+    "streaming": true,
+    "input_token_limit": 8192,
+    "output_token_limit": 4096
+  }
+}
+```

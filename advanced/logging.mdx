@@ -1,0 +1,107 @@
+---
+title: Logging
+description: Enable debug and info logging to troubleshoot API requests
+---
+
+The SDK uses the standard library [`logging`](https://docs.python.org/3/library/logging.html) module to provide visibility into API requests and responses.
+
+## Enabling logging
+
+You can enable logging by setting the `DEDALUS_LOG` environment variable.
+
+### Info level logging
+
+Set `DEDALUS_LOG=info` to see basic request and response information:
+
+```bash
+export DEDALUS_LOG=info
+```
+
+Then run your Python code:
+
+```python
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+response = client.chat.completions.create(
+    model="openai/gpt-5-nano",
+    messages=[{"role": "user", "content": "Hello"}],
+)
+```
+
+This will output log messages showing HTTP requests being made.
+
+### Debug level logging
+
+For more verbose logging, set `DEDALUS_LOG=debug`:
+
+```bash
+export DEDALUS_LOG=debug
+```
+
+Debug logging includes:
+
+- Detailed HTTP request information (method, URL, headers)
+- Response status codes and timing
+- Retry attempts and backoff delays
+- Internal SDK operations
+
+## Log format
+
+Logs are formatted as:
+
+```
+[YYYY-MM-DD HH:MM:SS - logger_name:line_number - LEVEL] message
+```
+
+For example:
+
+```
+[2024-03-15 14:12:26 - dedalus_labs._base_client:818 - DEBUG] Sending HTTP Request: POST https://api.dedaluslabs.ai/v1/chat/completions
+```
+
+## Programmatic configuration
+
+You can also configure logging programmatically in your Python code:
+
+```python
+import logging
+
+# Enable debug logging for the SDK
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="[%(asctime)s - %(name)s:%(lineno)d - %(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+
+# Get the SDK logger
+dedalus_logger = logging.getLogger("dedalus_labs")
+dedalus_logger.setLevel(logging.DEBUG)
+
+# Also enable httpx logging to see low-level HTTP details
+httpx_logger = logging.getLogger("httpx")
+httpx_logger.setLevel(logging.DEBUG)
+```
+
+## Filtering logs
+
+You can filter logs to only see specific components:
+
+```python
+import logging
+
+# Only log warnings and errors
+logging.getLogger("dedalus_labs").setLevel(logging.WARNING)
+
+# Or disable SDK logging entirely
+logging.getLogger("dedalus_labs").setLevel(logging.CRITICAL)
+```
+
+## Use cases
+
+Logging is helpful for:
+
+- **Debugging API issues**: See exactly what requests are being sent
+- **Performance monitoring**: Track request timing and retry behavior
+- **Security auditing**: Log all API interactions
+- **Development**: Understand SDK behavior during development

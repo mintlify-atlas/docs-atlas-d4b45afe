@@ -1,0 +1,167 @@
+---
+title: "Process OCR"
+description: "Extract text from PDFs and images using Mistral OCR"
+---
+
+## Method Signature
+
+```python
+client.ocr.process(
+    document: OCRDocumentParam,
+    model: Optional[str] = None
+) -> OCRResponse
+```
+
+## Parameters
+
+<ParamField path="document" type="OCRDocumentParam" required>
+  Document input for OCR processing.
+  
+  <Expandable title="OCRDocumentParam properties">
+    <ParamField path="document_url" type="str" required>
+      Data URI with base64-encoded document. Supports PDF and image formats (PNG, JPEG, etc.).
+      
+      Format: `data:<mimetype>;base64,<base64_encoded_data>`
+      
+      Example: `data:application/pdf;base64,JVBERi0xLjQK...`
+    </ParamField>
+    
+    <ParamField path="type" type="str">
+      Optional document type hint.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="model" type="str">
+  Optional model identifier to use for OCR processing.
+</ParamField>
+
+## Response
+
+<ResponseField name="model" type="str">
+  The model used for OCR processing.
+</ResponseField>
+
+<ResponseField name="pages" type="List[OCRPage]">
+  List of processed pages from the document.
+  
+  <Expandable title="OCRPage properties">
+    <ResponseField name="index" type="int">
+      The page number (0-indexed).
+    </ResponseField>
+    
+    <ResponseField name="markdown" type="str">
+      The extracted text content in markdown format.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="usage" type="Dict[str, object]">
+  Usage statistics for the OCR request.
+</ResponseField>
+
+## Examples
+
+```python
+from dedalus_labs import DedalusLabs
+import base64
+
+client = DedalusLabs()
+
+# Process a PDF document
+with open("document.pdf", "rb") as f:
+    pdf_data = base64.b64encode(f.read()).decode("utf-8")
+
+response = client.ocr.process(
+    document={
+        "document_url": f"data:application/pdf;base64,{pdf_data}"
+    }
+)
+
+for page in response.pages:
+    print(f"Page {page.index}:")
+    print(page.markdown)
+    print("---")
+```
+
+```python
+# Process an image file
+with open("receipt.png", "rb") as f:
+    image_data = base64.b64encode(f.read()).decode("utf-8")
+
+response = client.ocr.process(
+    document={
+        "document_url": f"data:image/png;base64,{image_data}",
+        "type": "receipt"
+    }
+)
+
+print("Extracted text:")
+print(response.pages[0].markdown)
+```
+
+```python
+# Process multiple pages and save markdown output
+with open("report.pdf", "rb") as f:
+    pdf_data = base64.b64encode(f.read()).decode("utf-8")
+
+response = client.ocr.process(
+    document={
+        "document_url": f"data:application/pdf;base64,{pdf_data}"
+    }
+)
+
+with open("output.md", "w") as f:
+    for page in response.pages:
+        f.write(f"# Page {page.index + 1}\n\n")
+        f.write(page.markdown)
+        f.write("\n\n")
+
+print(f"Processed {len(response.pages)} pages")
+print(f"Model used: {response.model}")
+```
+
+```python
+# Process a JPEG image
+import base64
+from pathlib import Path
+
+image_path = Path("scan.jpg")
+image_data = base64.b64encode(image_path.read_bytes()).decode("utf-8")
+
+response = client.ocr.process(
+    document={
+        "document_url": f"data:image/jpeg;base64,{image_data}"
+    },
+    model="mistral-ocr-latest"
+)
+
+markdown_text = response.pages[0].markdown
+print(markdown_text)
+```
+
+```python
+# Helper function to process any file
+def process_document_ocr(file_path: str):
+    """Process a document file with OCR and return markdown text."""
+    from pathlib import Path
+    import base64
+    import mimetypes
+    
+    path = Path(file_path)
+    mime_type = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
+    
+    file_data = base64.b64encode(path.read_bytes()).decode("utf-8")
+    
+    response = client.ocr.process(
+        document={
+            "document_url": f"data:{mime_type};base64,{file_data}"
+        }
+    )
+    
+    return "\n\n".join(page.markdown for page in response.pages)
+
+# Use the helper function
+text = process_document_ocr("invoice.pdf")
+print(text)
+```

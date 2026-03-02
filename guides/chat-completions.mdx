@@ -1,0 +1,301 @@
+---
+title: Chat completions
+description: Learn how to create chat completions with the Dedalus Python SDK
+---
+
+The chat completions API is the primary way to interact with language models through Dedalus. It supports OpenAI-compatible parameters and provider-specific extensions.
+
+## Basic usage
+
+Create a simple chat completion with a model and messages:
+
+```python
+import os
+from dedalus_labs import Dedalus
+
+client = Dedalus(
+    api_key=os.environ.get("DEDALUS_API_KEY")
+)
+
+completion = client.chat.completions.create(
+    model="openai/gpt-5-nano",
+    messages=[
+        {
+            "role": "system",
+            "content": "You are Stephen Dedalus. Respond in morose Joycean malaise.",
+        },
+        {
+            "role": "user",
+            "content": "Hello, how are you today?",
+        },
+    ],
+)
+
+print(completion.choices[0].message.content)
+print(f"Tokens used: {completion.usage.total_tokens}")
+```
+
+## Async usage
+
+Use the async client for concurrent operations:
+
+```python
+import os
+import asyncio
+from dedalus_labs import AsyncDedalus
+
+client = AsyncDedalus(
+    api_key=os.environ.get("DEDALUS_API_KEY")
+)
+
+async def main():
+    completion = await client.chat.completions.create(
+        model="openai/gpt-5-nano",
+        messages=[
+            {
+                "role": "system",
+                "content": "You are Stephen Dedalus. Respond in morose Joycean malaise.",
+            },
+            {
+                "role": "user",
+                "content": "Hello, how are you today?",
+            },
+        ],
+    )
+    print(completion.choices[0].message.content)
+
+asyncio.run(main())
+```
+
+## Streaming responses
+
+<Tabs>
+  <Tab title="Sync">
+    ```python
+    from dedalus_labs import Dedalus
+
+    client = Dedalus()
+
+    stream = client.chat.completions.create(
+        model="openai/gpt-5-nano",
+        stream=True,
+        messages=[
+            {
+                "role": "system",
+                "content": "You are Stephen Dedalus. Respond in morose Joycean malaise.",
+            },
+            {
+                "role": "user",
+                "content": "What do you think of artificial intelligence?",
+            },
+        ],
+    )
+
+    for chunk in stream:
+        if chunk.choices[0].delta.content:
+            print(chunk.choices[0].delta.content, end="")
+    ```
+  </Tab>
+  <Tab title="Async">
+    ```python
+    from dedalus_labs import AsyncDedalus
+
+    client = AsyncDedalus()
+
+    stream = await client.chat.completions.create(
+        model="openai/gpt-5-nano",
+        stream=True,
+        messages=[
+            {
+                "role": "system",
+                "content": "You are Stephen Dedalus. Respond in morose Joycean malaise.",
+            },
+            {
+                "role": "user",
+                "content": "What do you think of artificial intelligence?",
+            },
+        ],
+    )
+
+    async for chunk in stream:
+        if chunk.choices[0].delta.content:
+            print(chunk.choices[0].delta.content, end="")
+    ```
+  </Tab>
+</Tabs>
+
+## Common parameters
+
+### Temperature and sampling
+
+Control the randomness and creativity of responses:
+
+```python
+completion = client.chat.completions.create(
+    model="openai/gpt-5-nano",
+    messages=[{"role": "user", "content": "Write a creative story."}],
+    temperature=0.9,  # Higher = more creative (0-2)
+    top_p=0.95,       # Nucleus sampling threshold
+    max_tokens=500,   # Maximum tokens in response
+)
+```
+
+### Reasoning effort
+
+For reasoning models, control the computational effort:
+
+```python
+completion = client.chat.completions.create(
+    model="openai/gpt-5.1",
+    messages=[{"role": "user", "content": "Solve this complex problem..."}],
+    reasoning_effort="high",  # none, minimal, low, medium, high, xhigh
+)
+```
+
+### Response format
+
+Request structured JSON output:
+
+```python
+completion = client.chat.completions.create(
+    model="openai/gpt-5-nano",
+    messages=[{"role": "user", "content": "List three colors."}],
+    response_format={
+        "type": "json_schema",
+        "json_schema": {
+            "name": "colors",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "colors": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    }
+                },
+                "required": ["colors"],
+                "additionalProperties": False
+            }
+        }
+    }
+)
+```
+
+## Tool calling
+
+Define tools for the model to use:
+
+```python
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "description": "Get the current weather in a location",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city and state, e.g. San Francisco, CA"
+                    },
+                    "unit": {
+                        "type": "string",
+                        "enum": ["celsius", "fahrenheit"]
+                    }
+                },
+                "required": ["location"]
+            }
+        }
+    }
+]
+
+completion = client.chat.completions.create(
+    model="openai/gpt-5-nano",
+    messages=[{"role": "user", "content": "What's the weather in Boston?"}],
+    tools=tools,
+    tool_choice="auto"  # auto, none, required, or specific function
+)
+
+# Check if the model wants to call a tool
+if completion.choices[0].message.tool_calls:
+    tool_call = completion.choices[0].message.tool_calls[0]
+    print(f"Function: {tool_call.function.name}")
+    print(f"Arguments: {tool_call.function.arguments}")
+```
+
+## Error handling
+
+Handle different error scenarios:
+
+```python
+import dedalus_labs
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+try:
+    completion = client.chat.completions.create(
+        model="openai/gpt-5-nano",
+        messages=[{"role": "user", "content": "Hello!"}],
+    )
+except dedalus_labs.APIConnectionError as e:
+    print("The server could not be reached")
+    print(e.__cause__)  # underlying Exception
+except dedalus_labs.RateLimitError as e:
+    print("A 429 status code was received; we should back off a bit.")
+except dedalus_labs.APIStatusError as e:
+    print("Another non-200-range status code was received")
+    print(f"Status code: {e.status_code}")
+    print(f"Response: {e.response}")
+```
+
+## Advanced options
+
+### Retries and timeouts
+
+```python
+from dedalus_labs import Dedalus
+import httpx
+
+# Configure default retries and timeout
+client = Dedalus(
+    max_retries=5,
+    timeout=httpx.Timeout(60.0, read=5.0, write=10.0, connect=2.0),
+)
+
+# Override per request
+completion = client.with_options(timeout=30.0, max_retries=3).chat.completions.create(
+    model="openai/gpt-5-nano",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+```
+
+### Accessing raw responses
+
+```python
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+response = client.chat.completions.with_raw_response.create(
+    model="openai/gpt-5-nano",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+
+print(response.headers.get('X-Request-ID'))
+completion = response.parse()  # Get the parsed ChatCompletion object
+print(completion.choices[0].message.content)
+```
+
+<Note>
+  The Dedalus API automatically handles:
+  - Token usage metering
+  - Provider routing
+  - Automatic retries on transient failures
+  - Response caching (when configured)
+</Note>
+
+<Warning>
+  When using `stream=True`, make sure to consume the entire stream to avoid connection leaks. The async client handles this automatically with async context managers.
+</Warning>

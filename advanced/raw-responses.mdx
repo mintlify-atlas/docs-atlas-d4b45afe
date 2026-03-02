@@ -1,0 +1,163 @@
+---
+title: Raw responses
+description: Access raw HTTP response data including headers and streaming response bodies
+---
+
+By default, API methods return parsed response objects. You can access the raw HTTP response by using `.with_raw_response` or `.with_streaming_response`.
+
+## with_raw_response
+
+The `.with_raw_response` prefix returns an `APIResponse` object that provides access to the raw HTTP response while still eagerly reading the response body:
+
+```python
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+response = client.chat.completions.with_raw_response.create(
+    model="openai/gpt-5-nano",
+    messages=[{
+        "role": "system",
+        "content": "You are Stephen Dedalus. Respond in morose Joycean malaise.",
+    }, {
+        "role": "user",
+        "content": "Hello, how are you today?",
+    }],
+)
+
+print(response.headers.get('X-My-Header'))
+print(response.status_code)
+print(response.http_request.method)
+
+completion = response.parse()  # Get the parsed object
+print(completion.id)
+```
+
+### Available properties
+
+The `APIResponse` object provides:
+
+- `headers`: HTTP response headers
+- `status_code`: HTTP status code
+- `url`: Request URL
+- `method`: HTTP method
+- `http_version`: HTTP protocol version
+- `elapsed`: Time taken for the request
+- `http_request`: The original httpx Request object
+- `http_response`: The underlying httpx Response object
+- `retries_taken`: Number of retries made (0 if no retries)
+
+### Parsing the response
+
+Call `.parse()` to get the typed object that the method would normally return:
+
+```python
+response = client.chat.completions.with_raw_response.create(...)
+
+# Access raw response data
+print(f"Status: {response.status_code}")
+print(f"Retries: {response.retries_taken}")
+
+# Parse to get the typed completion object
+completion = response.parse()
+print(completion.id)
+```
+
+## with_streaming_response
+
+The `.with_streaming_response` prefix allows you to stream the response body instead of reading it all at once. This requires a context manager and is useful for large responses:
+
+```python
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+with client.chat.completions.with_streaming_response.create(
+    model="openai/gpt-5-nano",
+    messages=[
+        {
+            "role": "system",
+            "content": "You are Stephen Dedalus. Respond in morose Joycean malaise.",
+        },
+        {
+            "role": "user",
+            "content": "Hello, how are you today?",
+        },
+    ],
+) as response:
+    print(response.headers.get("X-My-Header"))
+
+    for line in response.iter_lines():
+        print(line)
+```
+
+The context manager ensures the response is properly closed.
+
+### Streaming methods
+
+The streaming response provides several iteration methods:
+
+```python
+with client.chat.completions.with_streaming_response.create(...) as response:
+    # Iterate over raw bytes
+    for chunk in response.iter_bytes():
+        process_chunk(chunk)
+
+    # Iterate over text chunks
+    for chunk in response.iter_text():
+        print(chunk)
+
+    # Iterate line by line
+    for line in response.iter_lines():
+        print(line)
+```
+
+You can also read the entire response at once:
+
+```python
+with client.chat.completions.with_streaming_response.create(...) as response:
+    content = response.read()  # bytes
+    text = response.text()     # str
+    data = response.json()     # parsed JSON
+    obj = response.parse()     # typed object
+```
+
+## Async usage
+
+Both features work with async clients using the same interface:
+
+```python
+from dedalus_labs import AsyncDedalus
+
+client = AsyncDedalus()
+
+# with_raw_response
+response = await client.chat.completions.with_raw_response.create(...)
+print(response.headers.get('X-My-Header'))
+completion = await response.parse()
+
+# with_streaming_response
+async with client.chat.completions.with_streaming_response.create(...) as response:
+    async for line in response.iter_lines():
+        print(line)
+```
+
+Note that async streaming methods must be awaited:
+
+```python
+async with client.chat.completions.with_streaming_response.create(...) as response:
+    content = await response.read()
+    text = await response.text()
+    data = await response.json()
+    obj = await response.parse()
+```
+
+## Use cases
+
+Raw responses are useful when you need:
+
+- **Custom headers**: Access response headers for rate limits, request IDs, etc.
+- **Status codes**: Check specific HTTP status codes
+- **Retry information**: See how many retries were attempted
+- **Memory efficiency**: Stream large responses instead of loading into memory
+- **Progress tracking**: Process streaming responses in chunks

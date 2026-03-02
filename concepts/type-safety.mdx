@@ -1,0 +1,487 @@
+---
+title: Type safety
+description: Leverage TypedDict parameters and Pydantic response models for full type safety and editor autocompletion
+---
+
+## Overview
+
+The Dedalus SDK is built with comprehensive type safety using Python's type hints, TypedDict for request parameters, and Pydantic models for responses. This provides excellent IDE autocompletion, static type checking with mypy, and runtime validation.
+
+## TypedDict request parameters
+
+All API methods use TypedDict for parameter validation, providing type hints for all available options:
+
+```python
+from dedalus_labs import Dedalus
+
+client = Dedalus(api_key="your-api-key")
+
+# Full type hints and autocompletion
+response = client.chat.completions.create(
+    model="gpt-4",  # Type: str | list[str] | DedalusModel
+    messages=[      # Type: Iterable[Message]
+        {"role": "user", "content": "Hello"}  # TypedDict: ChatCompletionUserMessageParam
+    ],
+    temperature=0.7,     # Type: Optional[float]
+    max_tokens=100,      # Type: Optional[int]
+    stream=False         # Type: Optional[Literal[False]]
+)
+```
+
+### Parameter types
+
+The `CompletionCreateParams` TypedDict defines all available parameters:
+
+```python
+from typing_extensions import TypedDict, Required, NotRequired
+
+class CompletionCreateParamsBase(TypedDict, total=False):
+    model: Required[str | list[str] | DedalusModel]
+    messages: NotRequired[Iterable[Message]]
+    temperature: NotRequired[float | None]
+    max_tokens: NotRequired[int | None]
+    stream: NotRequired[bool | None]
+    tools: NotRequired[Iterable[ChatCompletionToolParam] | None]
+    # ... and many more
+```
+
+<Info>
+`Required` fields must be provided, while `NotRequired` fields are optional. The SDK uses `total=False` to make all fields optional by default, with `Required` explicitly marking mandatory fields.
+</Info>
+
+## Pydantic response models
+
+All API responses are Pydantic models with full type safety:
+
+```python
+from dedalus_labs import Dedalus
+from dedalus_labs.types.chat import ChatCompletion
+
+client = Dedalus(api_key="your-api-key")
+
+response: ChatCompletion = client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "Hello"}]
+)
+
+# Full type hints for response fields
+print(response.id)              # str
+print(response.model)           # str
+print(response.created)         # int
+print(response.choices[0])      # Choice
+print(response.usage)           # CompletionUsage | None
+```
+
+### Response structure
+
+The `ChatCompletion` model:
+
+```python
+from pydantic import BaseModel
+from typing import List, Optional, Literal
+
+class ChatCompletion(BaseModel):
+    id: str
+    choices: List[Choice]
+    created: int
+    model: str
+    object: Literal["chat.completion"]
+    
+    # Optional fields
+    usage: Optional[CompletionUsage] = None
+    system_fingerprint: Optional[str] = None
+    correlation_id: Optional[str] = None
+    
+    # Dedalus extensions
+    pending_tools: Optional[List[PendingTool]] = None
+    server_results: Optional[dict] = None
+    mcp_server_errors: Optional[dict] = None
+```
+
+## Structured outputs with Pydantic
+
+Define custom Pydantic models for structured responses:
+
+```python
+from dedalus_labs import Dedalus
+from pydantic import BaseModel, Field
+from typing import List
+from typing_extensions import Literal
+
+class Location(BaseModel):
+    """Weather location information."""
+    city: str = Field(description="City name")
+    temperature: float = Field(description="Temperature value")
+    units: Literal["c", "f"] = Field(description="Temperature units")
+
+client = Dedalus(api_key="your-api-key")
+
+completion = client.chat.completions.parse(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "What's the weather in SF?"}],
+    response_format=Location,
+)
+
+# Type-safe access to parsed model
+location: Location | None = completion.choices[0].message.parsed
+if location:
+    print(f"{location.city}: {location.temperature}°{location.units}")
+```
+
+### Complex nested models
+
+```python
+from pydantic import BaseModel
+from typing import List
+from typing_extensions import Literal
+
+class Address(BaseModel):
+    street: str
+    city: str
+    country: str
+    postal_code: str
+
+class Person(BaseModel):
+    name: str
+    age: int
+    email: str
+    address: Address
+    hobbies: List[str]
+
+class Team(BaseModel):
+    team_name: str
+    members: List[Person]
+    founded_year: int
+
+client = Dedalus(api_key="your-api-key")
+
+completion = client.chat.completions.parse(
+    model="gpt-4",
+    messages=[
+        {"role": "user", "content": "Generate a software team with 3 members"}
+    ],
+    response_format=Team,
+)
+
+team: Team | None = completion.choices[0].message.parsed
+if team:
+    for member in team.members:
+        print(f"{member.name} ({member.age}) - {member.address.city}")
+```
+
+## Tool calls with Pydantic
+
+Define tool schemas using Pydantic models:
+
+```python
+from dedalus_labs import Dedalus
+from dedalus_labs.lib._tools import pydantic_function_tool
+from pydantic import BaseModel, Field
+from typing_extensions import Literal
+
+class GetWeatherArgs(BaseModel):
+    """Get the current weather for a location."""
+    
+    city: str = Field(description="City name")
+    country: str = Field(description="Country code (e.g., US, UK)")
+    units: Literal["c", "f"] = Field(
+        default="c",
+        description="Temperature units"
+    )
+
+client = Dedalus(api_key="your-api-key")
+
+completion = client.chat.completions.parse(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "What's the weather in London?"}],
+    tools=[pydantic_function_tool(GetWeatherArgs)],
+)
+
+if completion.choices[0].message.tool_calls:
+    tool_call = completion.choices[0].message.tool_calls[0]
+    
+    # Type-safe access to parsed arguments
+    args: GetWeatherArgs = tool_call.function.parsed_arguments
+    print(f"City: {args.city}")
+    print(f"Country: {args.country}")
+    print(f"Units: {args.units}")
+```
+
+## Type checking with mypy
+
+The SDK is fully compatible with mypy for static type checking:
+
+```python
+from dedalus_labs import Dedalus
+from dedalus_labs.types.chat import ChatCompletion, Choice
+
+def get_response(client: Dedalus, prompt: str) -> str:
+    response: ChatCompletion = client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    
+    choice: Choice = response.choices[0]
+    content: str | None = choice.message.content
+    
+    if content is None:
+        raise ValueError("No content in response")
+    
+    return content
+```
+
+Run mypy:
+
+```bash
+mypy your_script.py
+```
+
+## Generic types
+
+The SDK uses generics for flexible type safety:
+
+```python
+from typing import TypeVar, Generic
+from pydantic import BaseModel
+
+T = TypeVar('T', bound=BaseModel)
+
+class ParsedChatCompletion(Generic[T]):
+    """Chat completion with parsed structured output."""
+    
+    # When response_format is provided, parsed is of type T
+    # When not provided, parsed is None
+    parsed: T | None
+```
+
+This enables type-safe structured outputs:
+
+```python
+from dedalus_labs import Dedalus
+from pydantic import BaseModel
+
+class Location(BaseModel):
+    city: str
+    temperature: float
+
+client = Dedalus(api_key="your-api-key")
+
+# Type inference: ParsedChatCompletion[Location]
+completion = client.chat.completions.parse(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "Weather in NYC?"}],
+    response_format=Location,
+)
+
+# mypy knows this is Location | None
+location = completion.choices[0].message.parsed
+```
+
+## Message types
+
+Different message roles have distinct TypedDict types:
+
+```python
+from dedalus_labs.types.chat import (
+    ChatCompletionUserMessageParam,
+    ChatCompletionAssistantMessageParam,
+    ChatCompletionSystemMessageParam,
+    ChatCompletionToolMessageParam,
+)
+
+# User message
+user_msg: ChatCompletionUserMessageParam = {
+    "role": "user",
+    "content": "Hello"
+}
+
+# Assistant message
+assistant_msg: ChatCompletionAssistantMessageParam = {
+    "role": "assistant",
+    "content": "Hi there!"
+}
+
+# System message
+system_msg: ChatCompletionSystemMessageParam = {
+    "role": "system",
+    "content": "You are a helpful assistant."
+}
+
+# Tool message
+tool_msg: ChatCompletionToolMessageParam = {
+    "role": "tool",
+    "tool_call_id": "call_123",
+    "content": "Tool result"
+}
+```
+
+## NotGiven sentinel
+
+The SDK uses `NotGiven` to distinguish between `None` and omitted parameters:
+
+```python
+from dedalus_labs import Dedalus, NotGiven, not_given
+
+client = Dedalus(api_key="your-api-key")
+
+# These are different:
+response1 = client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "Hello"}],
+    temperature=None  # Explicitly set to None
+)
+
+response2 = client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "Hello"}],
+    temperature=not_given  # Parameter not provided
+)
+
+response3 = client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "Hello"}]
+    # temperature omitted - same as not_given
+)
+```
+
+<Info>
+For most use cases, simply omit optional parameters. Use `not_given` explicitly only when working with the `copy()` or `with_options()` methods.
+</Info>
+
+## Runtime validation
+
+Pydantic models provide runtime validation:
+
+```python
+from pydantic import BaseModel, Field, validator
+from typing_extensions import Literal
+
+class Temperature(BaseModel):
+    value: float = Field(ge=-100, le=100)  # Between -100 and 100
+    units: Literal["c", "f"]
+    
+    @validator('value')
+    def validate_temperature(cls, v, values):
+        units = values.get('units')
+        if units == 'c' and (v < -273.15):
+            raise ValueError('Temperature below absolute zero')
+        if units == 'f' and (v < -459.67):
+            raise ValueError('Temperature below absolute zero')
+        return v
+
+# This will raise ValidationError
+try:
+    temp = Temperature(value=-300, units="c")
+except Exception as e:
+    print(f"Validation error: {e}")
+```
+
+## IDE autocompletion
+
+The SDK provides excellent IDE support:
+
+```python
+from dedalus_labs import Dedalus
+
+client = Dedalus(api_key="your-api-key")
+
+response = client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "Hello"}],
+    # IDE shows all available parameters:
+    # - temperature, max_tokens, top_p, frequency_penalty
+    # - tools, tool_choice, response_format
+    # - stream, stream_options
+    # - and many more...
+)
+
+# IDE shows response attributes:
+response.id
+response.choices
+response.usage
+response.model
+response.created
+# ... and more
+```
+
+## Best practices
+
+<Tip>
+**Use Pydantic models for structured outputs** - Define clear schemas with validation rules and descriptions.
+</Tip>
+
+<Tip>
+**Enable mypy in your project** - Catch type errors before runtime:
+```bash
+pip install mypy
+mypy --strict your_code.py
+```
+</Tip>
+
+<Tip>
+**Leverage IDE autocompletion** - Let your editor guide you through available parameters and response fields.
+</Tip>
+
+<Warning>
+When using `response_format`, always check if `parsed` is `None` before accessing it. The model may refuse to generate structured output or hit token limits.
+</Warning>
+
+## Complete type-safe example
+
+```python
+from dedalus_labs import Dedalus, APIError
+from pydantic import BaseModel, Field
+from typing import List
+from typing_extensions import Literal
+
+class Ingredient(BaseModel):
+    name: str = Field(description="Ingredient name")
+    amount: str = Field(description="Amount needed")
+
+class Recipe(BaseModel):
+    """A cooking recipe."""
+    title: str = Field(description="Recipe title")
+    cuisine: str = Field(description="Type of cuisine")
+    servings: int = Field(ge=1, le=20, description="Number of servings")
+    ingredients: List[Ingredient] = Field(description="List of ingredients")
+    instructions: List[str] = Field(description="Step-by-step instructions")
+    cooking_time_minutes: int = Field(ge=1, description="Total cooking time")
+
+def get_recipe(client: Dedalus, dish: str) -> Recipe | None:
+    """Get a recipe for a specific dish with full type safety."""
+    try:
+        completion = client.chat.completions.parse(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a professional chef."},
+                {"role": "user", "content": f"Give me a recipe for {dish}"}
+            ],
+            response_format=Recipe,
+        )
+        
+        # Type: Recipe | None
+        recipe = completion.choices[0].message.parsed
+        return recipe
+        
+    except APIError as e:
+        print(f"API error: {e.message}")
+        return None
+
+if __name__ == "__main__":
+    client = Dedalus(api_key="your-api-key")
+    recipe = get_recipe(client, "carbonara")
+    
+    if recipe:
+        print(f"Recipe: {recipe.title}")
+        print(f"Cuisine: {recipe.cuisine}")
+        print(f"Servings: {recipe.servings}")
+        print(f"Time: {recipe.cooking_time_minutes} minutes\n")
+        
+        print("Ingredients:")
+        for ingredient in recipe.ingredients:
+            print(f"  - {ingredient.amount} {ingredient.name}")
+        
+        print("\nInstructions:")
+        for i, step in enumerate(recipe.instructions, 1):
+            print(f"  {i}. {step}")
+```

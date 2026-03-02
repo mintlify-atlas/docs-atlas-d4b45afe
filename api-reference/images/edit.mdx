@@ -1,0 +1,104 @@
+---
+title: "Edit Images"
+description: "Edit images using inpainting with DALL-E 2 or GPT Image"
+---
+
+## Overview
+
+Edit images using inpainting. Supports `dall-e-2` and `gpt-image-1`. Upload an image and optionally a mask to indicate which areas to regenerate based on the prompt.
+
+## Method Signature
+
+```python
+client.images.edit(
+    image: FileTypes,
+    prompt: str,
+    mask: Optional[FileTypes] = None,
+    model: Optional[str] = None,
+    n: Optional[int] = None,
+    response_format: Optional[str] = None,
+    size: Optional[str] = None,
+    user: Optional[str] = None,
+) -> ImagesResponse
+```
+
+## Parameters
+
+<ParamField path="image" type="file" required>
+  The image to edit. Must be a valid PNG file, less than 4MB, and square.
+</ParamField>
+
+<ParamField path="prompt" type="string" required>
+  A text description of the desired edits.
+</ParamField>
+
+<ParamField path="mask" type="file">
+  An additional image whose fully transparent areas (alpha = 0) indicate where the image should be edited. Must be a valid PNG file, less than 4MB, and the same dimensions as `image`.
+</ParamField>
+
+<ParamField path="model" type="string">
+  The model to use for image editing:
+  - `openai/dall-e-2`
+  - `openai/gpt-image-1`
+</ParamField>
+
+<ParamField path="n" type="integer">
+  Number of images to generate (1-10). For `dall-e-3`, only `n=1` is supported.
+</ParamField>
+
+<ParamField path="response_format" type="string">
+  Format for returned images: `url` or `b64_json`.
+</ParamField>
+
+<ParamField path="size" type="string">
+  Size of the generated images. Must be one of the valid sizes for the selected model.
+</ParamField>
+
+<ParamField path="user" type="string">
+  Unique identifier for your end-user, for monitoring and abuse detection.
+</ParamField>
+
+## Response
+
+<ResponseField name="created" type="integer">
+  Unix timestamp when the images were created.
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  List of edited images.
+  
+  <Expandable title="Image Object">
+    <ResponseField name="url" type="string">
+      URL of the generated image (if `response_format=url`).
+    </ResponseField>
+    
+    <ResponseField name="b64_json" type="string">
+      Base64-encoded image data (if `response_format=b64_json`).
+    </ResponseField>
+    
+    <ResponseField name="revised_prompt" type="string">
+      Revised prompt used for generation.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example
+
+```python
+import dedalus_labs
+
+client = dedalus_labs.Client(api_key="your-api-key")
+
+with open("original.png", "rb") as image_file:
+    with open("mask.png", "rb") as mask_file:
+        response = client.images.edit(
+            image=image_file,
+            mask=mask_file,
+            prompt="Add a sunset in the background",
+            model="openai/dall-e-2",
+            n=1,
+            size="1024x1024"
+        )
+
+print(response.data[0].url)
+```

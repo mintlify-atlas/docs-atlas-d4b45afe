@@ -1,0 +1,107 @@
+---
+title: Custom HTTP client
+description: Customize the underlying httpx client for advanced use cases like proxies and custom transports
+---
+
+You can directly override the [httpx client](https://www.python-httpx.org/api/#client) to customize it for your use case, including:
+
+- Support for [proxies](https://www.python-httpx.org/advanced/proxies/)
+- Custom [transports](https://www.python-httpx.org/advanced/transports/)
+- Additional [advanced](https://www.python-httpx.org/advanced/clients/) functionality
+
+## Using DefaultHttpxClient
+
+When customizing the HTTP client, use `DefaultHttpxClient` to preserve the SDK's default settings for timeouts, connection limits, and redirect handling:
+
+```python
+import httpx
+from dedalus_labs import Dedalus, DefaultHttpxClient
+
+client = Dedalus(
+    http_client=DefaultHttpxClient(
+        proxy="http://my.test.proxy.example.com",
+        transport=httpx.HTTPTransport(local_address="0.0.0.0"),
+    ),
+)
+```
+
+If you override `http_client` with your own instance of `httpx.Client`, httpx's defaults will be used instead of the SDK's defaults. Using `DefaultHttpxClient` ensures you retain:
+
+- Default timeout of 60 seconds
+- Default connection limits
+- Automatic redirect following
+
+## Configuring proxies
+
+You can configure HTTP proxies by passing the `proxy` parameter:
+
+```python
+from dedalus_labs import Dedalus, DefaultHttpxClient
+
+client = Dedalus(
+    http_client=DefaultHttpxClient(
+        proxy="http://my.proxy.example.com:8080",
+    ),
+)
+```
+
+For authenticated proxies:
+
+```python
+from dedalus_labs import Dedalus, DefaultHttpxClient
+
+client = Dedalus(
+    http_client=DefaultHttpxClient(
+        proxy="http://username:password@my.proxy.example.com:8080",
+    ),
+)
+```
+
+## Custom transports
+
+You can customize the transport layer for advanced networking configurations:
+
+```python
+import httpx
+from dedalus_labs import Dedalus, DefaultHttpxClient
+
+client = Dedalus(
+    http_client=DefaultHttpxClient(
+        transport=httpx.HTTPTransport(
+            local_address="0.0.0.0",
+            retries=3,
+        ),
+    ),
+)
+```
+
+## Per-request customization
+
+You can also customize the client on a per-request basis using `with_options()`:
+
+```python
+from dedalus_labs import DefaultHttpxClient
+
+# Use custom client for this request only
+response = client.with_options(
+    http_client=DefaultHttpxClient(proxy="http://proxy.example.com")
+).chat.completions.create(
+    model="openai/gpt-5-nano",
+    messages=[{"role": "user", "content": "Hello"}],
+)
+```
+
+## Base URL configuration
+
+You can override the base URL using the `DEDALUS_BASE_URL` environment variable or the `base_url` parameter:
+
+```python
+from dedalus_labs import Dedalus, DefaultHttpxClient
+
+client = Dedalus(
+    base_url="http://my.test.server.example.com:8083",
+    http_client=DefaultHttpxClient(
+        proxy="http://my.test.proxy.example.com",
+    ),
+)
+```

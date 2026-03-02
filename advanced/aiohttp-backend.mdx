@@ -1,0 +1,81 @@
+---
+title: Using aiohttp backend
+description: Switch to aiohttp for improved concurrency performance with async clients
+---
+
+By default, the async client uses `httpx` for HTTP requests. However, for improved concurrency performance you can use `aiohttp` as the HTTP backend.
+
+## Installation
+
+First, install the SDK with the `aiohttp` extra:
+
+```bash
+pip install dedalus_labs[aiohttp]
+```
+
+## Basic usage
+
+Enable aiohttp by instantiating the client with `http_client=DefaultAioHttpClient()`:
+
+```python
+import os
+import asyncio
+from dedalus_labs import DefaultAioHttpClient
+from dedalus_labs import AsyncDedalus
+
+
+async def main() -> None:
+    async with AsyncDedalus(
+        api_key=os.environ.get("DEDALUS_API_KEY"),
+        http_client=DefaultAioHttpClient(),
+    ) as client:
+        chat_completion = await client.chat.completions.create(
+            model="openai/gpt-5-nano",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are Stephen Dedalus. Respond in morose Joycean malaise.",
+                },
+                {
+                    "role": "user",
+                    "content": "Hello, how are you today?",
+                },
+            ],
+        )
+        print(chat_completion.id)
+
+
+asyncio.run(main())
+```
+
+## Why use aiohttp?
+
+`aiohttp` can provide better concurrency performance compared to `httpx` in certain scenarios, particularly when:
+
+- Making many concurrent requests
+- Working with high-throughput applications
+- Needing fine-grained control over connection pooling
+
+## Using with context manager
+
+Always use `DefaultAioHttpClient` with the `async with` context manager to ensure proper resource cleanup:
+
+```python
+async with AsyncDedalus(
+    http_client=DefaultAioHttpClient(),
+) as client:
+    # Make your API calls
+    response = await client.chat.completions.create(...)
+```
+
+The context manager ensures that all connections are properly closed when you're done.
+
+## Compatibility
+
+`DefaultAioHttpClient` preserves the same defaults that the SDK uses internally:
+
+- Default timeout of 60 seconds
+- Default connection limits
+- Automatic redirect following
+
+All other SDK features work identically whether you use httpx or aiohttp as the backend.

@@ -1,0 +1,461 @@
+---
+title: Runner and tool execution
+description: Execute tools automatically with the DedalusRunner for agentic workflows
+---
+
+The `DedalusRunner` provides automatic tool execution for building agentic AI applications. It handles tool calling loops, server-side MCP tool execution, and client-side function calling.
+
+## Basic usage
+
+Create a runner and execute tools automatically:
+
+```python
+import os
+from dedalus_labs import Dedalus, DedalusRunner
+
+client = Dedalus(
+    api_key=os.environ.get("DEDALUS_API_KEY")
+)
+
+def get_weather(location: str, unit: str = "celsius") -> dict:
+    """Get the current weather in a location.
+    
+    Args:
+        location: The city and state, e.g. San Francisco, CA
+        unit: The temperature unit (celsius or fahrenheit)
+    """
+    # Simulate weather API call
+    return {
+        "location": location,
+        "temperature": 22,
+        "unit": unit,
+        "condition": "sunny"
+    }
+
+# Create runner with tools
+runner = DedalusRunner(
+    client=client,
+    model="openai/gpt-5-nano",
+    tools=[get_weather]
+)
+
+# Run with automatic tool execution
+result = runner.run(
+    messages=[{"role": "user", "content": "What's the weather in Boston?"}]
+)
+
+print(result.output)
+print(f"Tools called: {result.tools_called}")
+print(f"Steps used: {result.steps_used}")
+```
+
+## Async usage
+
+Run tools asynchronously:
+
+```python
+import os
+import asyncio
+from dedalus_labs import AsyncDedalus, DedalusRunner
+
+client = AsyncDedalus(
+    api_key=os.environ.get("DEDALUS_API_KEY")
+)
+
+async def get_weather(location: str, unit: str = "celsius") -> dict:
+    """Get the current weather in a location."""
+    # Simulate async API call
+    await asyncio.sleep(0.1)
+    return {
+        "location": location,
+        "temperature": 22,
+        "unit": unit,
+        "condition": "sunny"
+    }
+
+async def main():
+    runner = DedalusRunner(
+        client=client,
+        model="openai/gpt-5-nano",
+        tools=[get_weather]
+    )
+    
+    result = await runner.run(
+        messages=[{"role": "user", "content": "What's the weather in Boston?"}]
+    )
+    
+    print(result.output)
+
+asyncio.run(main())
+```
+
+## Tool definition
+
+The runner automatically generates tool schemas from Python functions:
+
+```python
+from dedalus_labs import DedalusRunner, Dedalus
+
+def search_database(query: str, limit: int = 10) -> list[dict]:
+    """Search the product database.
+    
+    Args:
+        query: Search query string
+        limit: Maximum number of results to return
+    
+    Returns:
+        List of matching products
+    """
+    # Implementation here
+    return [{"id": 1, "name": "Product A"}]
+
+def get_user_info(user_id: int) -> dict:
+    """Retrieve user information by ID.
+    
+    Args:
+        user_id: The user's unique identifier
+    
+    Returns:
+        User information dictionary
+    """
+    return {"id": user_id, "name": "John Doe"}
+
+client = Dedalus()
+
+# Runner automatically generates schemas from function signatures and docstrings
+runner = DedalusRunner(
+    client=client,
+    model="openai/gpt-5-nano",
+    tools=[search_database, get_user_info]
+)
+
+result = runner.run(
+    messages=[{"role": "user", "content": "Search for laptops and get info for user 123"}]
+)
+```
+
+<Info>
+  The runner uses function signatures, type hints, and docstrings to automatically generate OpenAI-compatible tool schemas. Make sure your functions have:
+  - Clear docstrings describing what the function does
+  - Type hints for parameters
+  - Docstring Args sections describing each parameter
+</Info>
+
+## MCP server integration
+
+Use MCP servers for server-side tool execution:
+
+```python
+from dedalus_labs import Dedalus, DedalusRunner
+
+client = Dedalus()
+
+# Use MCP servers from the marketplace
+runner = DedalusRunner(
+    client=client,
+    model="openai/gpt-5-nano",
+    mcp_servers=[
+        "dedalus-labs/example-server",
+        "dedalus-labs/weather",
+    ]
+)
+
+result = runner.run(
+    messages=[{"role": "user", "content": "Use the example server to help me"}]
+)
+
+print(result.output)
+print(f"MCP results: {result.mcp_results}")
+```
+
+<Tabs>
+  <Tab title="Marketplace slugs">
+    ```python
+    runner = DedalusRunner(
+        client=client,
+        model="openai/gpt-5-nano",
+        mcp_servers=[
+            "dedalus-labs/example-server",
+            "dedalus-labs/weather@v2",  # Specific version
+        ]
+    )
+    ```
+  </Tab>
+  <Tab title="Custom URLs">
+    ```python
+    runner = DedalusRunner(
+        client=client,
+        model="openai/gpt-5-nano",
+        mcp_servers=[
+            "http://localhost:8000/mcp",
+            "https://my-server.com/mcp",
+        ]
+    )
+    ```
+  </Tab>
+  <Tab title="Server objects">
+    ```python
+    runner = DedalusRunner(
+        client=client,
+        model="openai/gpt-5-nano",
+        mcp_servers=[
+            {"url": "http://localhost:8000/mcp"},
+            {"slug": "dedalus-labs/weather"},
+        ]
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Configuration options
+
+<Steps>
+  <Step title="Model configuration">
+    Configure the model and its parameters:
+
+    ```python
+    runner = DedalusRunner(
+        client=client,
+        model="openai/gpt-5-nano",
+        temperature=0.7,
+        max_tokens=1000,
+        tools=[get_weather]
+    )
+    ```
+  </Step>
+  <Step title="Execution limits">
+    Control the maximum number of tool execution steps:
+
+    ```python
+    runner = DedalusRunner(
+        client=client,
+        model="openai/gpt-5-nano",
+        tools=[get_weather],
+        max_steps=5  # Maximum tool execution rounds
+    )
+    ```
+  </Step>
+  <Step title="Streaming">
+    Enable streaming responses:
+
+    ```python
+    runner = DedalusRunner(
+        client=client,
+        model="openai/gpt-5-nano",
+        tools=[get_weather],
+        stream=True
+    )
+
+    for chunk in runner.run(
+        messages=[{"role": "user", "content": "What's the weather?"}]
+    ):
+        print(chunk.content, end="")
+    ```
+  </Step>
+</Steps>
+
+## Tool execution policies
+
+Control which tools can be executed and when:
+
+```python
+from dedalus_labs import DedalusRunner, Dedalus
+
+def policy_function(context):
+    """Control tool execution based on context."""
+    # context contains: tool_name, tool_args, message_history, etc.
+    
+    # Example: Limit API calls per session
+    api_calls = sum(1 for call in context.get('tool_results', []) 
+                    if 'api' in call.get('tool_name', ''))
+    
+    if api_calls >= 5:
+        return {"allow": False, "reason": "API call limit reached"}
+    
+    return {"allow": True}
+
+client = Dedalus()
+
+runner = DedalusRunner(
+    client=client,
+    model="openai/gpt-5-nano",
+    tools=[get_weather],
+    policy=policy_function
+)
+
+result = runner.run(
+    messages=[{"role": "user", "content": "What's the weather?"}]
+)
+```
+
+## Tool execution events
+
+Monitor tool execution in real-time:
+
+```python
+from dedalus_labs import DedalusRunner, Dedalus
+
+def on_tool_event(event):
+    """Handle tool execution events."""
+    print(f"Tool event: {event['type']}")
+    print(f"Tool name: {event.get('tool_name')}")
+    print(f"Arguments: {event.get('arguments')}")
+    print(f"Result: {event.get('result')}")
+    print("---")
+
+client = Dedalus()
+
+runner = DedalusRunner(
+    client=client,
+    model="openai/gpt-5-nano",
+    tools=[get_weather],
+    on_tool_event=on_tool_event,
+    verbose=True
+)
+
+result = runner.run(
+    messages=[{"role": "user", "content": "What's the weather in Boston and NYC?"}]
+)
+```
+
+## Multi-turn conversations
+
+Maintain conversation history:
+
+```python
+from dedalus_labs import DedalusRunner, Dedalus
+
+client = Dedalus()
+runner = DedalusRunner(
+    client=client,
+    model="openai/gpt-5-nano",
+    tools=[get_weather]
+)
+
+# Initial request
+result1 = runner.run(
+    messages=[{"role": "user", "content": "What's the weather in Boston?"}]
+)
+
+print(result1.output)
+
+# Continue the conversation
+history = result1.to_input_list()  # Get full conversation history
+history.append({"role": "user", "content": "How about New York?"})
+
+result2 = runner.run(messages=history)
+print(result2.output)
+```
+
+## Error handling
+
+```python
+import dedalus_labs
+from dedalus_labs import Dedalus, DedalusRunner
+
+def risky_function(value: int) -> int:
+    """A function that might fail."""
+    if value < 0:
+        raise ValueError("Value must be positive")
+    return value * 2
+
+client = Dedalus()
+runner = DedalusRunner(
+    client=client,
+    model="openai/gpt-5-nano",
+    tools=[risky_function]
+)
+
+try:
+    result = runner.run(
+        messages=[{"role": "user", "content": "Double the value -5"}]
+    )
+    print(result.output)
+except ValueError as e:
+    print(f"Tool execution error: {e}")
+except dedalus_labs.APIError as e:
+    print(f"API error: {e}")
+```
+
+## Complete example
+
+Building a multi-tool agent:
+
+```python
+import os
+from typing import List, Dict
+from dedalus_labs import Dedalus, DedalusRunner
+
+# Define tools
+def search_products(query: str, category: str = "all") -> List[Dict]:
+    """Search the product catalog.
+    
+    Args:
+        query: Search query
+        category: Product category to filter by
+    """
+    return [
+        {"id": 1, "name": "Laptop Pro", "price": 1299},
+        {"id": 2, "name": "Mouse Wireless", "price": 29}
+    ]
+
+def get_inventory(product_id: int) -> Dict:
+    """Check product inventory.
+    
+    Args:
+        product_id: The product ID to check
+    """
+    return {"product_id": product_id, "in_stock": True, "quantity": 45}
+
+def calculate_discount(price: float, discount_percent: float) -> float:
+    """Calculate discounted price.
+    
+    Args:
+        price: Original price
+        discount_percent: Discount percentage (0-100)
+    """
+    return price * (1 - discount_percent / 100)
+
+# Event handler
+def log_tool_events(event):
+    print(f"[{event['type']}] {event.get('tool_name', 'N/A')}")
+
+# Create runner
+client = Dedalus(api_key=os.environ.get("DEDALUS_API_KEY"))
+
+runner = DedalusRunner(
+    client=client,
+    model="openai/gpt-5-nano",
+    tools=[search_products, get_inventory, calculate_discount],
+    max_steps=10,
+    verbose=True,
+    on_tool_event=log_tool_events
+)
+
+# Run query
+result = runner.run(
+    messages=[{
+        "role": "user",
+        "content": "Find laptops, check if the first one is in stock, and calculate a 15% discount on it"
+    }]
+)
+
+print("\n=== Final Response ===")
+print(result.output)
+print(f"\nTools used: {', '.join(result.tools_called)}")
+print(f"Steps taken: {result.steps_used}")
+print(f"\nFull conversation history: {len(result.messages)} messages")
+```
+
+<Note>
+  The runner automatically:
+  - Generates tool schemas from your functions
+  - Handles multi-step tool execution loops
+  - Manages conversation history
+  - Executes both sync and async tools
+  - Integrates server-side MCP tools
+</Note>
+
+<Warning>
+  Set appropriate `max_steps` limits to prevent infinite tool execution loops. The default is 10 steps.
+</Warning>

@@ -1,0 +1,420 @@
+---
+title: Image generation
+description: Generate, edit, and create variations of images with the Dedalus Python SDK
+---
+
+Create images from text prompts, edit existing images, and generate variations using DALL-E and GPT Image models.
+
+## Generate images
+
+Create images from text descriptions:
+
+```python
+import os
+from dedalus_labs import Dedalus
+
+client = Dedalus(
+    api_key=os.environ.get("DEDALUS_API_KEY")
+)
+
+response = client.images.generate(
+    prompt="A serene mountain landscape at sunset with a lake reflection",
+    model="openai/dall-e-3",
+    size="1024x1024",
+    quality="hd",
+    n=1
+)
+
+image_url = response.data[0].url
+print(f"Generated image: {image_url}")
+```
+
+## Async usage
+
+Generate images asynchronously:
+
+```python
+import os
+import asyncio
+from dedalus_labs import AsyncDedalus
+
+client = AsyncDedalus(
+    api_key=os.environ.get("DEDALUS_API_KEY")
+)
+
+async def main():
+    response = await client.images.generate(
+        prompt="A futuristic cityscape with flying cars",
+        model="openai/dall-e-3"
+    )
+    print(response.data[0].url)
+
+asyncio.run(main())
+```
+
+## Available models
+
+<Tabs>
+  <Tab title="DALL-E 3">
+    Highest quality image generation with advanced understanding:
+
+    ```python
+    response = client.images.generate(
+        prompt="A photorealistic cat wearing a space suit",
+        model="openai/dall-e-3",
+        size="1024x1024",  # 1024x1024, 1792x1024, 1024x1792
+        quality="hd",       # standard or hd
+        style="vivid",      # vivid or natural
+        n=1                 # Only n=1 supported
+    )
+    ```
+  </Tab>
+  <Tab title="DALL-E 2">
+    Fast and cost-effective image generation:
+
+    ```python
+    response = client.images.generate(
+        prompt="A digital art of a sunset",
+        model="openai/dall-e-2",
+        size="512x512",  # 256x256, 512x512, or 1024x1024
+        n=4              # Generate multiple images
+    )
+    ```
+  </Tab>
+  <Tab title="GPT Image 1">
+    Advanced model with fine control and transparency support:
+
+    ```python
+    response = client.images.generate(
+        prompt="A logo design with transparent background",
+        model="openai/gpt-image-1",
+        size="auto",         # auto, 1024x1024, 1536x1024, 1024x1536
+        quality="high",      # low, medium, high
+        background="transparent",  # transparent, opaque, auto
+        output_format="png",      # png, jpeg, webp
+        moderation="low"          # low or auto
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Response formats
+
+<Tabs>
+  <Tab title="URL (default)">
+    Images are returned as URLs (valid for 60 minutes):
+
+    ```python
+    response = client.images.generate(
+        prompt="A sunset over mountains",
+        model="openai/dall-e-3",
+        response_format="url"  # Default for DALL-E
+    )
+
+    # Download the image
+    import requests
+    from pathlib import Path
+
+    image_url = response.data[0].url
+    image_data = requests.get(image_url).content
+    Path("generated_image.png").write_bytes(image_data)
+    ```
+  </Tab>
+  <Tab title="Base64">
+    Images are returned as base64-encoded data:
+
+    ```python
+    import base64
+    from pathlib import Path
+
+    response = client.images.generate(
+        prompt="A sunset over mountains",
+        model="openai/dall-e-2",
+        response_format="b64_json"
+    )
+
+    # Decode and save
+    image_data = base64.b64decode(response.data[0].b64_json)
+    Path("generated_image.png").write_bytes(image_data)
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  `gpt-image-1` always returns base64-encoded images and doesn't support the `response_format` parameter.
+</Note>
+
+## Image sizes
+
+Different models support different sizes:
+
+<CodeGroup>
+```python DALL-E 3 sizes
+# Square
+response = client.images.generate(
+    prompt="A cat",
+    model="openai/dall-e-3",
+    size="1024x1024"
+)
+
+# Landscape
+response = client.images.generate(
+    prompt="A wide landscape",
+    model="openai/dall-e-3",
+    size="1792x1024"
+)
+
+# Portrait
+response = client.images.generate(
+    prompt="A tall building",
+    model="openai/dall-e-3",
+    size="1024x1792"
+)
+```
+
+```python DALL-E 2 sizes
+response = client.images.generate(
+    prompt="A cat",
+    model="openai/dall-e-2",
+    size="256x256"   # or "512x512", "1024x1024"
+)
+```
+
+```python GPT Image sizes
+response = client.images.generate(
+    prompt="A cat",
+    model="openai/gpt-image-1",
+    size="auto"      # or "1024x1024", "1536x1024", "1024x1536"
+)
+```
+</CodeGroup>
+
+## Style control (DALL-E 3)
+
+<Tabs>
+  <Tab title="Vivid">
+    Hyper-real and dramatic images:
+
+    ```python
+    response = client.images.generate(
+        prompt="A dragon in a mystical forest",
+        model="openai/dall-e-3",
+        style="vivid"  # More dramatic and vivid
+    )
+    ```
+  </Tab>
+  <Tab title="Natural">
+    More natural, less hyper-real images:
+
+    ```python
+    response = client.images.generate(
+        prompt="A person reading in a library",
+        model="openai/dall-e-3",
+        style="natural"  # More subdued and natural
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Quality levels
+
+<Tabs>
+  <Tab title="DALL-E 3 quality">
+    ```python
+    # Standard quality (faster, lower cost)
+    response = client.images.generate(
+        prompt="A cat",
+        model="openai/dall-e-3",
+        quality="standard"
+    )
+
+    # HD quality (higher detail, more cost)
+    response = client.images.generate(
+        prompt="A detailed portrait",
+        model="openai/dall-e-3",
+        quality="hd"
+    )
+    ```
+  </Tab>
+  <Tab title="GPT Image quality">
+    ```python
+    response = client.images.generate(
+        prompt="A landscape",
+        model="openai/gpt-image-1",
+        quality="auto"  # low, medium, high, or auto
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Edit images
+
+Edit images using inpainting (DALL-E 2 and GPT Image):
+
+```python
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+response = client.images.edit(
+    image=Path("original.png"),
+    prompt="Add a red hat to the person",
+    mask=Path("mask.png"),  # Optional: transparent areas indicate what to change
+    model="openai/dall-e-2",
+    size="1024x1024",
+    n=1
+)
+
+print(response.data[0].url)
+```
+
+<Info>
+  **Image editing requirements:**
+  - Images must be square PNG files
+  - Less than 4MB in size
+  - If `mask` is not provided, the image must have transparency (alpha channel)
+  - Transparent areas indicate where to edit
+</Info>
+
+## Create variations
+
+Generate variations of an existing image (DALL-E 2 only):
+
+```python
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+response = client.images.create_variation(
+    image=Path("original.png"),
+    model="openai/dall-e-2",
+    n=3,  # Generate 3 variations
+    size="512x512"
+)
+
+for i, image_data in enumerate(response.data):
+    print(f"Variation {i+1}: {image_data.url}")
+```
+
+## Advanced features (GPT Image)
+
+### Transparent backgrounds
+
+```python
+response = client.images.generate(
+    prompt="A coffee cup logo",
+    model="openai/gpt-image-1",
+    background="transparent",  # transparent, opaque, or auto
+    output_format="png"        # Must use png or webp for transparency
+)
+```
+
+### Output compression
+
+```python
+response = client.images.generate(
+    prompt="A landscape photo",
+    model="openai/gpt-image-1",
+    output_format="webp",
+    output_compression=85  # 0-100, only for webp or jpeg
+)
+```
+
+### Streaming image generation
+
+```python
+response = client.images.generate(
+    prompt="A complex artwork",
+    model="openai/gpt-image-1",
+    stream=True,
+    partial_images=3  # Number of progressive previews (0-3)
+)
+
+# Access progressive images as they're generated
+for event in response:
+    if event.type == "partial":
+        print(f"Partial image {event.index} received")
+    elif event.type == "final":
+        print("Final image received")
+```
+
+## Multiple images (DALL-E 2)
+
+Generate multiple images in one request:
+
+```python
+response = client.images.generate(
+    prompt="A cute robot",
+    model="openai/dall-e-2",
+    n=4,  # Generate 4 images (max 10)
+    size="512x512"
+)
+
+for i, image_data in enumerate(response.data):
+    print(f"Image {i+1}: {image_data.url}")
+```
+
+<Warning>
+  DALL-E 3 only supports `n=1`. Use DALL-E 2 for multiple image generation.
+</Warning>
+
+## Complete example
+
+```python
+import requests
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+# Generate a high-quality image
+response = client.images.generate(
+    prompt="A professional photograph of a modern minimalist office space with natural lighting, plants, and ergonomic furniture",
+    model="openai/dall-e-3",
+    size="1792x1024",  # Landscape
+    quality="hd",
+    style="natural",
+    n=1
+)
+
+image_url = response.data[0].url
+print(f"Generated image URL: {image_url}")
+print(f"Revised prompt: {response.data[0].revised_prompt}")
+
+# Download and save the image
+image_data = requests.get(image_url).content
+output_path = Path("office_space.png")
+output_path.write_bytes(image_data)
+print(f"Image saved to {output_path}")
+```
+
+## Error handling
+
+```python
+import dedalus_labs
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+try:
+    response = client.images.generate(
+        prompt="A sunset",
+        model="openai/dall-e-3"
+    )
+except dedalus_labs.BadRequestError as e:
+    print(f"Invalid request: {e.message}")
+    # Common causes: policy violation, invalid parameters
+except dedalus_labs.APIConnectionError as e:
+    print("Network error occurred")
+    print(e.__cause__)
+except dedalus_labs.RateLimitError as e:
+    print("Rate limit exceeded")
+except dedalus_labs.APIStatusError as e:
+    print(f"API error: {e.status_code}")
+```
+
+<Note>
+  Generated images from DALL-E are owned by you and can be used commercially. Make sure your prompts comply with OpenAI's usage policies.
+</Note>

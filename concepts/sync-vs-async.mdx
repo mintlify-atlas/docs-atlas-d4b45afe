@@ -1,0 +1,314 @@
+---
+title: Synchronous vs asynchronous clients
+description: Understand when to use Dedalus vs AsyncDedalus and how to work with async/await patterns
+---
+
+## Overview
+
+The Dedalus SDK provides two client implementations:
+
+- `Dedalus` - Synchronous client for traditional blocking I/O
+- `AsyncDedalus` - Asynchronous client for async/await patterns
+
+Both clients offer identical functionality and share the same API surface, differing only in their execution model.
+
+## Synchronous client (Dedalus)
+
+The synchronous client is ideal for:
+- Simple scripts and prototypes
+- Sequential processing workflows
+- Applications without async frameworks
+- Jupyter notebooks and REPL environments
+
+### Basic usage
+
+```python
+from dedalus_labs import Dedalus
+
+client = Dedalus(api_key="your-api-key")
+
+# Blocking call - waits for response
+response = client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+
+print(response.choices[0].message.content)
+```
+
+### Sequential processing
+
+```python
+from dedalus_labs import Dedalus
+
+client = Dedalus(api_key="your-api-key")
+
+questions = [
+    "What is Python?",
+    "What is asyncio?",
+    "What is FastAPI?"
+]
+
+# Process questions one at a time
+for question in questions:
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": question}]
+    )
+    print(f"Q: {question}")
+    print(f"A: {response.choices[0].message.content}\n")
+```
+
+## Asynchronous client (AsyncDedalus)
+
+The asynchronous client is ideal for:
+- High-concurrency applications
+- Web servers (FastAPI, Starlette, etc.)
+- Processing multiple requests in parallel
+- Applications built on async frameworks
+
+### Basic usage
+
+```python
+import asyncio
+from dedalus_labs import AsyncDedalus
+
+async def main():
+    client = AsyncDedalus(api_key="your-api-key")
+    
+    # Non-blocking call with await
+    response = await client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": "Hello!"}]
+    )
+    
+    print(response.choices[0].message.content)
+
+asyncio.run(main())
+```
+
+### Concurrent processing
+
+```python
+import asyncio
+from dedalus_labs import AsyncDedalus
+
+async def ask_question(client: AsyncDedalus, question: str) -> str:
+    response = await client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": question}]
+    )
+    return response.choices[0].message.content
+
+async def main():
+    client = AsyncDedalus(api_key="your-api-key")
+    
+    questions = [
+        "What is Python?",
+        "What is asyncio?",
+        "What is FastAPI?"
+    ]
+    
+    # Process all questions concurrently
+    tasks = [ask_question(client, q) for q in questions]
+    answers = await asyncio.gather(*tasks)
+    
+    for question, answer in zip(questions, answers):
+        print(f"Q: {question}")
+        print(f"A: {answer}\n")
+
+asyncio.run(main())
+```
+
+<Info>
+The async version processes all three questions concurrently, significantly reducing total execution time compared to the synchronous sequential approach.
+</Info>
+
+## Context managers
+
+Both clients support context managers for automatic resource cleanup:
+
+<Tabs>
+  <Tab title="Synchronous">
+    ```python
+    from dedalus_labs import Dedalus
+
+    with Dedalus(api_key="your-api-key") as client:
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": "Hello!"}]
+        )
+    # Client is automatically closed after the with block
+    ```
+  </Tab>
+  <Tab title="Asynchronous">
+    ```python
+    import asyncio
+    from dedalus_labs import AsyncDedalus
+
+    async def main():
+        async with AsyncDedalus(api_key="your-api-key") as client:
+            response = await client.chat.completions.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": "Hello!"}]
+            )
+        # Client is automatically closed after the async with block
+
+    asyncio.run(main())
+    ```
+  </Tab>
+</Tabs>
+
+## FastAPI integration
+
+The async client integrates seamlessly with FastAPI:
+
+```python
+from fastapi import FastAPI
+from dedalus_labs import AsyncDedalus
+from pydantic import BaseModel
+
+app = FastAPI()
+client = AsyncDedalus(api_key="your-api-key")
+
+class ChatRequest(BaseModel):
+    message: str
+
+class ChatResponse(BaseModel):
+    response: str
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest):
+    completion = await client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": request.message}]
+    )
+    
+    return ChatResponse(
+        response=completion.choices[0].message.content
+    )
+
+@app.on_event("shutdown")
+async def shutdown():
+    await client.close()
+```
+
+## Streaming with async
+
+Streaming works with both clients but is particularly powerful with async:
+
+<Tabs>
+  <Tab title="Synchronous">
+    ```python
+    from dedalus_labs import Dedalus
+
+    client = Dedalus(api_key="your-api-key")
+
+    stream = client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": "Write a story"}],
+        stream=True
+    )
+
+    for chunk in stream:
+        if chunk.choices[0].delta.content:
+            print(chunk.choices[0].delta.content, end="")
+    ```
+  </Tab>
+  <Tab title="Asynchronous">
+    ```python
+    import asyncio
+    from dedalus_labs import AsyncDedalus
+
+    async def main():
+        client = AsyncDedalus(api_key="your-api-key")
+
+        stream = await client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": "Write a story"}],
+            stream=True
+        )
+
+        async for chunk in stream:
+            if chunk.choices[0].delta.content:
+                print(chunk.choices[0].delta.content, end="")
+
+    asyncio.run(main())
+    ```
+  </Tab>
+</Tabs>
+
+## Performance comparison
+
+### Sequential requests (3 requests)
+
+```python
+# Synchronous: ~6 seconds (2s × 3, sequential)
+from dedalus_labs import Dedalus
+
+client = Dedalus(api_key="your-api-key")
+for i in range(3):
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": "Hello"}]
+    )
+```
+
+```python
+# Asynchronous: ~2 seconds (parallel execution)
+import asyncio
+from dedalus_labs import AsyncDedalus
+
+async def main():
+    client = AsyncDedalus(api_key="your-api-key")
+    tasks = [
+        client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": "Hello"}]
+        )
+        for i in range(3)
+    ]
+    await asyncio.gather(*tasks)
+
+asyncio.run(main())
+```
+
+<Tip>
+For I/O-bound workloads like API calls, async clients can provide 3-10x performance improvements when processing multiple requests concurrently.
+</Tip>
+
+## When to use each client
+
+| Use Case | Recommended Client |
+|----------|-------------------|
+| Simple scripts | `Dedalus` (sync) |
+| Jupyter notebooks | `Dedalus` (sync) |
+| FastAPI/Starlette apps | `AsyncDedalus` (async) |
+| Django async views | `AsyncDedalus` (async) |
+| Batch processing (sequential) | `Dedalus` (sync) |
+| Batch processing (concurrent) | `AsyncDedalus` (async) |
+| Learning/prototyping | `Dedalus` (sync) |
+| Production web services | `AsyncDedalus` (async) |
+
+## Converting between sync and async
+
+You cannot directly convert between sync and async clients, but you can use the same configuration:
+
+```python
+from dedalus_labs import Dedalus, AsyncDedalus
+
+# Shared configuration
+config = {
+    "api_key": "your-api-key",
+    "timeout": 60.0,
+    "max_retries": 3
+}
+
+# Create both clients with same config
+sync_client = Dedalus(**config)
+async_client = AsyncDedalus(**config)
+```
+
+<Warning>
+Do not use the synchronous client inside async functions, and do not try to await synchronous client methods. Always use `AsyncDedalus` in async contexts.
+</Warning>

@@ -1,0 +1,453 @@
+---
+title: Audio speech
+description: Generate speech from text using text-to-speech models with the Dedalus Python SDK
+---
+
+Convert text into natural-sounding speech audio using OpenAI's text-to-speech models.
+
+## Basic usage
+
+Generate speech from text and save to a file:
+
+```python
+import os
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus(
+    api_key=os.environ.get("DEDALUS_API_KEY")
+)
+
+response = client.audio.speech.create(
+    model="tts-1",
+    voice="alloy",
+    input="Hello! This is a test of the text-to-speech system."
+)
+
+# Save the audio to a file
+output_path = Path("speech.mp3")
+with output_path.open("wb") as f:
+    for chunk in response.iter_bytes():
+        f.write(chunk)
+
+print(f"Audio saved to {output_path}")
+```
+
+## Async usage
+
+Generate speech asynchronously:
+
+```python
+import os
+import asyncio
+from pathlib import Path
+from dedalus_labs import AsyncDedalus
+
+client = AsyncDedalus(
+    api_key=os.environ.get("DEDALUS_API_KEY")
+)
+
+async def main():
+    response = await client.audio.speech.create(
+        model="gpt-4o-mini-tts",
+        voice="nova",
+        input="Hello from async!"
+    )
+    
+    output_path = Path("async_speech.mp3")
+    with output_path.open("wb") as f:
+        async for chunk in response.iter_bytes():
+            f.write(chunk)
+    
+    print(f"Audio saved to {output_path}")
+
+asyncio.run(main())
+```
+
+## Available models
+
+<Tabs>
+  <Tab title="tts-1">
+    Fast and cost-effective model optimized for real-time applications:
+
+    ```python
+    response = client.audio.speech.create(
+        model="tts-1",
+        voice="alloy",
+        input="Your text here"
+    )
+    ```
+  </Tab>
+  <Tab title="tts-1-hd">
+    Higher quality model with improved audio fidelity:
+
+    ```python
+    response = client.audio.speech.create(
+        model="tts-1-hd",
+        voice="alloy",
+        input="Your text here"
+    )
+    ```
+  </Tab>
+  <Tab title="gpt-4o-mini-tts">
+    Advanced model with instruction-following capabilities:
+
+    ```python
+    response = client.audio.speech.create(
+        model="gpt-4o-mini-tts",
+        voice="nova",
+        input="Your text here",
+        instructions="Speak in a cheerful, upbeat tone"
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Available voices
+
+Choose from multiple built-in voices with different characteristics:
+
+<CodeGroup>
+```python Alloy
+# Neutral, balanced voice
+response = client.audio.speech.create(
+    model="tts-1",
+    voice="alloy",
+    input="Your text here"
+)
+```
+
+```python Echo
+# Male voice
+response = client.audio.speech.create(
+    model="tts-1",
+    voice="echo",
+    input="Your text here"
+)
+```
+
+```python Fable
+# British accent
+response = client.audio.speech.create(
+    model="tts-1",
+    voice="fable",
+    input="Your text here"
+)
+```
+
+```python Nova
+# Female voice
+response = client.audio.speech.create(
+    model="tts-1",
+    voice="nova",
+    input="Your text here"
+)
+```
+
+```python Onyx
+# Deep, authoritative male voice
+response = client.audio.speech.create(
+    model="tts-1",
+    voice="onyx",
+    input="Your text here"
+)
+```
+
+```python Shimmer
+# Soft, gentle female voice
+response = client.audio.speech.create(
+    model="tts-1",
+    voice="shimmer",
+    input="Your text here"
+)
+```
+</CodeGroup>
+
+<Accordion title="All available voices">
+  **Standard voices:**
+  - `alloy` - Neutral and balanced
+  - `echo` - Male voice
+  - `fable` - British accent
+  - `onyx` - Deep male voice
+  - `nova` - Female voice
+  - `shimmer` - Soft female voice
+
+  **Additional voices:**
+  - `ash` - Clear and articulate
+  - `ballad` - Storytelling quality
+  - `coral` - Warm and friendly
+  - `sage` - Wise and measured
+  - `verse` - Poetic delivery
+  - `marin` - Professional tone
+  - `cedar` - Natural cadence
+</Accordion>
+
+## Custom voices
+
+Use a custom voice by providing a voice ID:
+
+```python
+response = client.audio.speech.create(
+    model="gpt-4o-mini-tts",
+    voice={"id": "voice_1234567890"},
+    input="Your text here"
+)
+```
+
+## Output formats
+
+Generate audio in different formats:
+
+<Tabs>
+  <Tab title="MP3 (default)">
+    ```python
+    response = client.audio.speech.create(
+        model="tts-1",
+        voice="alloy",
+        input="Your text here",
+        response_format="mp3"  # Default
+    )
+    ```
+  </Tab>
+  <Tab title="Opus">
+    ```python
+    # Best for internet streaming and low latency
+    response = client.audio.speech.create(
+        model="tts-1",
+        voice="alloy",
+        input="Your text here",
+        response_format="opus"
+    )
+    ```
+  </Tab>
+  <Tab title="AAC">
+    ```python
+    # Good compression for mobile devices
+    response = client.audio.speech.create(
+        model="tts-1",
+        voice="alloy",
+        input="Your text here",
+        response_format="aac"
+    )
+    ```
+  </Tab>
+  <Tab title="FLAC">
+    ```python
+    # Lossless audio quality
+    response = client.audio.speech.create(
+        model="tts-1-hd",
+        voice="alloy",
+        input="Your text here",
+        response_format="flac"
+    )
+    ```
+  </Tab>
+  <Tab title="WAV">
+    ```python
+    # Uncompressed, best compatibility
+    response = client.audio.speech.create(
+        model="tts-1",
+        voice="alloy",
+        input="Your text here",
+        response_format="wav"
+    )
+    ```
+  </Tab>
+  <Tab title="PCM">
+    ```python
+    # Raw audio data
+    response = client.audio.speech.create(
+        model="tts-1",
+        voice="alloy",
+        input="Your text here",
+        response_format="pcm"
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Speech speed
+
+Adjust the playback speed:
+
+```python
+response = client.audio.speech.create(
+    model="tts-1",
+    voice="alloy",
+    input="Your text here",
+    speed=1.25  # Range: 0.25 to 4.0 (1.0 is default)
+)
+```
+
+<Info>
+  - `0.25` - Slowest (1/4 speed)
+  - `1.0` - Normal speed (default)
+  - `2.0` - Double speed
+  - `4.0` - Fastest (4x speed)
+</Info>
+
+## Voice instructions
+
+Control voice characteristics with instructions (works with `gpt-4o-mini-tts` models):
+
+```python
+response = client.audio.speech.create(
+    model="gpt-4o-mini-tts",
+    voice="nova",
+    input="Welcome to our customer service line.",
+    instructions="Speak in a professional, friendly tone with a slight smile in your voice."
+)
+```
+
+<Warning>
+  The `instructions` parameter does not work with `tts-1` or `tts-1-hd` models. Use `gpt-4o-mini-tts` or newer models for instruction-following capabilities.
+</Warning>
+
+## Streaming audio
+
+Stream audio for real-time playback:
+
+```python
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+response = client.audio.speech.create(
+    model="tts-1",
+    voice="alloy",
+    input="This is a streaming example."
+)
+
+# Stream audio chunks
+for chunk in response.iter_bytes(chunk_size=1024):
+    # Process or play chunk in real-time
+    pass
+```
+
+## Complete example
+
+Generate speech with all options:
+
+```python
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+long_text = """
+Welcome to our automated system. 
+Please listen carefully as our menu options have changed.
+For customer service, press 1.
+For technical support, press 2.
+For billing inquiries, press 3.
+"""
+
+response = client.audio.speech.create(
+    model="gpt-4o-mini-tts",
+    voice="nova",
+    input=long_text,
+    instructions="Speak clearly and professionally with appropriate pauses.",
+    response_format="mp3",
+    speed=0.9  # Slightly slower for clarity
+)
+
+# Save to file
+output_path = Path("menu_audio.mp3")
+with output_path.open("wb") as f:
+    for chunk in response.iter_bytes():
+        f.write(chunk)
+
+print(f"Audio saved to {output_path}")
+print(f"Text length: {len(long_text)} characters")
+```
+
+## Error handling
+
+```python
+import dedalus_labs
+from pathlib import Path
+from dedalus_labs import Dedalus
+
+client = Dedalus()
+
+try:
+    response = client.audio.speech.create(
+        model="tts-1",
+        voice="alloy",
+        input="Your text here"
+    )
+    
+    Path("output.mp3").write_bytes(response.content)
+    
+except dedalus_labs.BadRequestError as e:
+    print(f"Invalid request: {e.message}")
+    # Common causes: text too long (>4096 chars), invalid voice
+except dedalus_labs.APIConnectionError as e:
+    print("Network error occurred")
+    print(e.__cause__)
+except dedalus_labs.APIStatusError as e:
+    print(f"API error: {e.status_code}")
+```
+
+## Text length limits
+
+<Note>
+  Maximum text length: **4,096 characters**
+  
+  For longer text, split into multiple requests and concatenate the audio files.
+</Note>
+
+## Processing long text
+
+```python
+from pathlib import Path
+from dedalus_labs import Dedalus
+import math
+
+client = Dedalus()
+
+def split_text(text, max_length=4000):
+    """Split text into chunks at sentence boundaries."""
+    sentences = text.split(". ")
+    chunks = []
+    current_chunk = ""
+    
+    for sentence in sentences:
+        if len(current_chunk) + len(sentence) < max_length:
+            current_chunk += sentence + ". "
+        else:
+            chunks.append(current_chunk.strip())
+            current_chunk = sentence + ". "
+    
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+    
+    return chunks
+
+long_text = """[Your very long text here...]"""
+
+chunks = split_text(long_text)
+audio_files = []
+
+for i, chunk in enumerate(chunks):
+    response = client.audio.speech.create(
+        model="tts-1",
+        voice="alloy",
+        input=chunk
+    )
+    
+    filename = f"chunk_{i:03d}.mp3"
+    Path(filename).write_bytes(response.content)
+    audio_files.append(filename)
+    print(f"Generated {filename}")
+
+print(f"\nCreated {len(audio_files)} audio files")
+```
+
+<Info>
+  Consider using audio editing tools like `ffmpeg` to concatenate multiple audio files:
+  
+  ```bash
+  ffmpeg -i "concat:chunk_000.mp3|chunk_001.mp3|chunk_002.mp3" -acodec copy output.mp3
+  ```
+</Info>

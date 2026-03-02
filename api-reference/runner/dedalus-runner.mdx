@@ -1,0 +1,313 @@
+---
+title: "DedalusRunner"
+description: "Enhanced client with autonomous tool execution capabilities"
+---
+
+## Overview
+
+The `DedalusRunner` class extends the Dedalus client with autonomous multi-step tool execution. It manages conversation loops, automatically executes tool calls, and supports both local Python functions and remote MCP servers.
+
+## Class Initialization
+
+```python
+from dedalus_labs import Dedalus
+from dedalus_labs.lib.runner import DedalusRunner
+
+client = Dedalus(api_key="your-api-key")
+runner = DedalusRunner(client=client, verbose=False)
+```
+
+### Constructor Parameters
+
+<ParamField path="client" type="Dedalus | AsyncDedalus" required>
+  The Dedalus client instance (sync or async).
+</ParamField>
+
+<ParamField path="verbose" type="boolean">
+  Enable verbose logging of execution steps. Defaults to `False`.
+</ParamField>
+
+## run() Method
+
+Execute a tool-enabled conversation with autonomous multi-step execution.
+
+```python
+result = runner.run(
+    input: str | list[Message] | None = None,
+    tools: list[Callable] | None = None,
+    messages: list[Message] | None = None,
+    instructions: str | None = None,
+    model: str | list[str] | DedalusModel | list[DedalusModel] | None = None,
+    max_steps: int = 10,
+    mcp_servers: MCPServersInput = None,
+    credentials: Sequence[Any] | None = None,
+    stream: bool = False,
+    transport: Literal["http", "realtime"] = "http",
+    verbose: bool | None = None,
+    debug: bool | None = None,
+    on_tool_event: Callable[[Dict[str, JsonValue]], None] | None = None,
+    return_intent: bool = False,
+    policy: PolicyInput = None,
+    available_models: list[str] | None = None,
+    strict_models: bool = True,
+    # ... plus all chat completion parameters
+)
+```
+
+### Core Parameters
+
+<ParamField path="input" type="string | list[Message]">
+  User input as a string or list of messages. Converted to a user message if string.
+</ParamField>
+
+<ParamField path="tools" type="list[Callable]">
+  List of Python functions to make available as tools. Functions are introspected to generate schemas automatically.
+</ParamField>
+
+<ParamField path="messages" type="list[Message]">
+  Full conversation history. Alternative to `input` for continuing conversations.
+</ParamField>
+
+<ParamField path="instructions" type="string">
+  System instructions. Converted to a system message. Overrides existing system messages if used with `messages`.
+</ParamField>
+
+<ParamField path="model" type="string | list[string] | DedalusModel | list[DedalusModel]" required>
+  Model(s) to use. Can be:
+  - Single model ID: `"openai/gpt-4"`
+  - List of model IDs for fallback: `["openai/gpt-4", "anthropic/claude-3-5-sonnet"]`
+  - DedalusModel object with settings
+  - List of DedalusModel objects
+</ParamField>
+
+### Runner Configuration
+
+<ParamField path="max_steps" type="integer">
+  Maximum number of execution steps before stopping. Defaults to `10`.
+</ParamField>
+
+<ParamField path="mcp_servers" type="MCPServersInput">
+  MCP servers to connect to. Can be:
+  - Single server slug or URL: `"filesystem"`
+  - List of slugs/URLs: `["filesystem", "github"]`
+  - MCP server objects with configuration
+</ParamField>
+
+<ParamField path="credentials" type="Sequence[Any]">
+  Credentials for MCP servers or other services.
+</ParamField>
+
+<ParamField path="stream" type="boolean">
+  Enable streaming responses. Defaults to `False`.
+</ParamField>
+
+<ParamField path="transport" type="string">
+  Transport protocol: `"http"` or `"realtime"`. Defaults to `"http"`.
+</ParamField>
+
+<ParamField path="verbose" type="boolean">
+  Override instance-level verbose setting for this run.
+</ParamField>
+
+<ParamField path="debug" type="boolean">
+  Enable debug mode with additional logging.
+</ParamField>
+
+<ParamField path="on_tool_event" type="Callable">
+  Callback function called for each tool execution event.
+</ParamField>
+
+<ParamField path="return_intent" type="boolean">
+  Include intent information in the result. Defaults to `False`.
+</ParamField>
+
+<ParamField path="policy" type="PolicyInput">
+  Policy function or dictionary to control execution behavior per step.
+</ParamField>
+
+<ParamField path="available_models" type="list[string]">
+  List of models available for dynamic routing. Defaults to the provided model list.
+</ParamField>
+
+<ParamField path="strict_models" type="boolean">
+  Enforce strict model validation against available_models. Defaults to `True`.
+</ParamField>
+
+### Chat Completion Parameters
+
+All standard chat completion parameters are supported and forwarded to the API:
+
+<ParamField path="temperature" type="number">
+  Sampling temperature (0.0-2.0).
+</ParamField>
+
+<ParamField path="max_tokens" type="integer">
+  Maximum tokens to generate.
+</ParamField>
+
+<ParamField path="top_p" type="number">
+  Nucleus sampling parameter.
+</ParamField>
+
+<ParamField path="frequency_penalty" type="number">
+  Frequency penalty (-2.0 to 2.0).
+</ParamField>
+
+<ParamField path="presence_penalty" type="number">
+  Presence penalty (-2.0 to 2.0).
+</ParamField>
+
+<ParamField path="reasoning_effort" type="string">
+  Reasoning effort level for models that support extended thinking.
+</ParamField>
+
+<ParamField path="thinking" type="Dict[str, Any]">
+  Thinking configuration for models with reasoning capabilities.
+</ParamField>
+
+<ParamField path="response_format" type="Dict[str, JsonValue] | type">
+  Response format specification for structured output.
+</ParamField>
+
+<ParamField path="tool_choice" type="string | Dict[str, JsonValue]">
+  Control tool calling behavior: `"auto"`, `"none"`, `"required"`, or specific tool.
+</ParamField>
+
+And many more standard parameters (see `CompletionCreateParams` for full list).
+
+## Return Value
+
+For non-streaming runs, returns a `_RunResult` object:
+
+<ResponseField name="final_output" type="string">
+  Final text output from the conversation.
+</ResponseField>
+
+<ResponseField name="output" type="string">
+  Alias for `final_output`.
+</ResponseField>
+
+<ResponseField name="content" type="string">
+  Alias for `final_output`.
+</ResponseField>
+
+<ResponseField name="tool_results" type="list[ToolResult]">
+  List of all tool execution results.
+</ResponseField>
+
+<ResponseField name="steps_used" type="integer">
+  Number of execution steps completed.
+</ResponseField>
+
+<ResponseField name="messages" type="list[Message]">
+  Full conversation history including all tool calls and responses.
+</ResponseField>
+
+<ResponseField name="tools_called" type="list[string]">
+  Names of all tools that were called during execution.
+</ResponseField>
+
+<ResponseField name="mcp_results" type="list[MCPToolResult]">
+  Results from server-side MCP tool executions.
+</ResponseField>
+
+<ResponseField name="intents" type="list[Dict[str, JsonValue]]">
+  Intent information (if `return_intent=True`).
+</ResponseField>
+
+### Result Methods
+
+<ResponseField name="to_input_list()" type="list[Message]">
+  Get the full conversation history for continuation.
+</ResponseField>
+
+## Examples
+
+### Basic Tool Execution
+
+```python
+from dedalus_labs import Dedalus
+from dedalus_labs.lib.runner import DedalusRunner
+
+client = Dedalus(api_key="your-api-key")
+runner = DedalusRunner(client)
+
+def get_weather(location: str) -> str:
+    """Get the current weather for a location."""
+    return f"The weather in {location} is sunny, 72°F"
+
+result = runner.run(
+    input="What's the weather in San Francisco?",
+    tools=[get_weather],
+    model="openai/gpt-4"
+)
+
+print(result.output)
+# "The weather in San Francisco is sunny and 72°F."
+```
+
+### Multi-Step Execution
+
+```python
+def search_database(query: str) -> list[dict]:
+    """Search the database for records."""
+    return [{"id": 1, "name": "Example"}]
+
+def fetch_details(record_id: int) -> dict:
+    """Fetch detailed information for a record."""
+    return {"id": record_id, "details": "Full details here"}
+
+result = runner.run(
+    input="Find all users named John and get their details",
+    tools=[search_database, fetch_details],
+    model="openai/gpt-4",
+    max_steps=5
+)
+
+print(f"Steps used: {result.steps_used}")
+print(f"Tools called: {result.tools_called}")
+```
+
+### With MCP Servers
+
+```python
+result = runner.run(
+    input="List the files in the current directory",
+    mcp_servers=["filesystem"],
+    model="openai/gpt-4"
+)
+
+print(result.output)
+```
+
+### Streaming with Tools
+
+```python
+for chunk in runner.run(
+    input="Calculate 15 * 23 and explain the result",
+    tools=[lambda a, b: a * b],
+    model="openai/gpt-4",
+    stream=True
+):
+    if hasattr(chunk, 'choices') and chunk.choices:
+        delta = chunk.choices[0].delta
+        if hasattr(delta, 'content') and delta.content:
+            print(delta.content, end='', flush=True)
+```
+
+### Policy-Based Execution
+
+```python
+def my_policy(context):
+    """Control execution based on step number."""
+    if context["step"] > 3:
+        return {"model": "openai/gpt-4-turbo"}  # Switch to faster model
+    return {}
+
+result = runner.run(
+    input="Perform a complex multi-step analysis",
+    tools=[analyze_data, generate_report],
+    model="openai/gpt-4",
+    policy=my_policy
+)
+```
