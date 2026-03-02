@@ -1,0 +1,155 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "Dedalus Python SDK",
+  "projectDescription": "Official Python SDK for the Dedalus API with support for chat, embeddings, audio, images, and OCR",
+  "theme": "palm",
+  "primaryColor": "#1E40AF",
+  "lightColor": "#3B82F6",
+  "darkColor": "#1E3A8A",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/client-configuration",
+              "concepts/sync-vs-async",
+              "concepts/streaming",
+              "concepts/error-handling",
+              "concepts/type-safety"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/chat-completions",
+              "guides/embeddings",
+              "guides/audio-transcription",
+              "guides/audio-speech",
+              "guides/image-generation",
+              "guides/ocr",
+              "guides/file-uploads",
+              "guides/runner-tool-execution"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/custom-http-client",
+              "advanced/aiohttp-backend",
+              "advanced/retries-timeouts",
+              "advanced/logging",
+              "advanced/raw-responses"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Client",
+            "pages": [
+              "api-reference/client/dedalus",
+              "api-reference/client/async-dedalus"
+            ]
+          },
+          {
+            "group": "Chat",
+            "pages": [
+              "api-reference/chat/completions",
+              "api-reference/chat/streaming"
+            ]
+          },
+          {
+            "group": "Embeddings",
+            "pages": [
+              "api-reference/embeddings/create"
+            ]
+          },
+          {
+            "group": "Audio",
+            "pages": [
+              "api-reference/audio/speech",
+              "api-reference/audio/transcriptions",
+              "api-reference/audio/translations"
+            ]
+          },
+          {
+            "group": "Images",
+            "pages": [
+              "api-reference/images/generate",
+              "api-reference/images/edit",
+              "api-reference/images/variations"
+            ]
+          },
+          {
+            "group": "OCR",
+            "pages": [
+              "api-reference/ocr/process"
+            ]
+          },
+          {
+            "group": "Models",
+            "pages": [
+              "api-reference/models/list",
+              "api-reference/models/retrieve"
+            ]
+          },
+          {
+            "group": "Runner",
+            "pages": [
+              "api-reference/runner/dedalus-runner"
+            ]
+          },
+          {
+            "group": "Types",
+            "pages": [
+              "api-reference/types/shared-types",
+              "api-reference/types/exceptions"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Chat completions with streaming support",
+    "Text embeddings generation",
+    "Audio transcription and speech synthesis",
+    "Image generation, editing, and variations",
+    "OCR processing for document extraction",
+    "Both synchronous and asynchronous clients",
+    "Full type safety with Pydantic models",
+    "DedalusRunner for tool execution",
+    "MCP server support for AI assistants"
+  ],
+  "publicApiSurface": [
+    "Dedalus",
+    "AsyncDedalus",
+    "client.chat.completions.create()",
+    "client.embeddings.create()",
+    "client.audio.speech.create()",
+    "client.audio.transcriptions.create()",
+    "client.audio.translations.create()",
+    "client.images.generate()",
+    "client.images.edit()",
+    "client.images.create_variation()",
+    "client.ocr.process()",
+    "client.models.list()",
+    "client.models.retrieve()",
+    "DedalusRunner",
+    "Stream",
+    "AsyncStream"
+  ]
+}
